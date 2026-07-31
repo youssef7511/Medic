@@ -1,0 +1,28 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * §9: font wiring. Latin + a proper Arabic face are exposed as CSS vars so the
+ * Tailwind `sans` stack can switch per locale. These are SYSTEM fallbacks —
+ * replace with next/font (IBM Plex Sans Arabic / Noto Sans Arabic + a Latin
+ * face) before launch. A Latin font rendering Arabic looks broken to a native
+ * reader, so this is a real to-do, not cosmetic.
+ */
+:root {
+  --font-latin: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
+  --font-arabic: 'Segoe UI', 'Noto Sans Arabic', 'Geeza Pro', sans-serif;
+}
+
+html[lang='ar'] {
+  --tw-default-font: var(--font-arabic);
+}
+
+body {
+  min-height: 100vh;
+  font-family: var(--font-latin), var(--font-arabic);
+}
+
+html[lang='ar'] body {
+  font-family: var(--font-arabic);
+}

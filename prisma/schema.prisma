@@ -1,0 +1,513 @@
+// Medic — data model. See docs/architecture-plan.md §3.
+//
+// Load-bearing ideas encoded here:
+//  - PatientDoctorLink is THE security boundary (§2). Every clinical row hangs
+//    off a link, never off a raw patientId.
+//  - Sensitive free text is stored as Bytes (envelope-encrypted at the app
+//    layer, §3.1/§10) — the DB never sees plaintext notes/messages/reason/allergies.
+//  - AuditLog is append-only (§10); no app code updates or deletes it.
+//  - Double-booking is arbitrated by a Postgres exclusion constraint added in a
+//    follow-up migration (§3, §6), not by application checks.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum Sex {
+  FEMALE
+  MALE
+  UNSPECIFIED
+}
+
+enum Role {
+  PATIENT
+  DOCTOR_STAFF
+  DOCTOR
+  SUPPORT_ADMIN
+  SUPER_ADMIN
+}
+
+enum ScopeType {
+  GLOBAL
+  DOCTOR
+}
+
+enum LinkStatus {
+  ACTIVE
+  ARCHIVED
+  BLOCKED
+}
+
+enum LinkSource {
+  BOOKING
+  DOCTOR_INVITE
+  IMPORT
+}
+
+enum AppointmentStatus {
+  REQUESTED
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum DocumentType {
+  PRESCRIPTION
+  LAB_ORDER
+  REPORT
+  CERTIFICATE
+}
+
+enum OutboxStatus {
+  PENDING
+  DISPATCHED
+  FAILED
+}
+
+enum NoteStatus {
+  ACTIVE
+  RETRACTED
+}
+
+enum DocumentStatus {
+  ACTIVE
+  SUPERSEDED
+  REVOKED
+}
+
+enum RevisionReason {
+  CREATE
+  EDIT
+  RETRACT
+}
+
+// ---------------------------------------------------------------------------
+// Identity & access
+// ---------------------------------------------------------------------------
+
+model User {
+  id               String     @id @default(cuid())
+  email            String?    @unique
+  phone            String?    @unique
+  passwordHash     String?
+  emailVerified    DateTime?  @db.Timestamptz(3)
+  locale           String     @default("fr")
+  status           UserStatus @default(ACTIVE)
+  mfaSecret        String? // required for DOCTOR + DOCTOR_STAFF + admin roles (§10)
+  /// Secret generated during enrollment, promoted to mfaSecret only once the
+  /// user proves they can produce a valid code. Keeping it separate means a
+  /// half-finished enrollment can never lock someone out of their account.
+  mfaPendingSecret String?
+  createdAt        DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime   @updatedAt @db.Timestamptz(3)
+
+  patientProfile  PatientProfile?
+  doctorProfile   DoctorProfile?
+  roleAssignments RoleAssignment[]
+  consents        Consent[]
+  sessions        Session[]
+
+  @@index([status])
+}
+
+/// Auth.js session persistence + server-side revocation (§10): deleting a row
+/// kills the session immediately rather than waiting for token expiry.
+model Session {
+  id          String    @id @default(cuid())
+  userId      String
+  refreshHash String    @unique
+  userAgent   String?
+  ip          String?
+  expiresAt   DateTime  @db.Timestamptz(3)
+  revokedAt   DateTime? @db.Timestamptz(3)
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// Versioned consent record (§10): which ToS/privacy version, when, from where.
+model Consent {
+  id         String   @id @default(cuid())
+  userId     String
+  policy     String // "terms" | "privacy" | "data-processing"
+  version    String
+  acceptedAt DateTime @default(now()) @db.Timestamptz(3)
+  ip         String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, policy, version])
+}
+
+/// Roles carry a scope (§5). A DOCTOR_STAFF row scoped to a doctorId lets one
+/// secretary serve specific doctors without seeing anyone else's practice.
+model RoleAssignment {
+  id        String    @id @default(cuid())
+  userId    String
+  role      Role
+  scopeType ScopeType @default(GLOBAL)
+  scopeId   String? // doctorId when scopeType = DOCTOR
+  grantedBy String
+  grantedAt DateTime  @default(now()) @db.Timestamptz(3)
+  expiresAt DateTime? @db.Timestamptz(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, role, scopeId])
+  @@index([userId])
+  @@index([role, scopeId])
+}
+
+// ---------------------------------------------------------------------------
+// Profiles
+// ---------------------------------------------------------------------------
+
+model DoctorProfile {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  slug          String   @unique // /fr/doctors/dr-amine-benali
+  specialtyId   String
+  licenseNumber String // verified by a human super-admin before publish (§10)
+  bio           Json // { fr: "...", ar: "..." }
+  headline      Json
+  photoUrl      String?
+  languages     String[]
+  isPublished   Boolean  @default(false) // super-admin gates this
+  autoConfirm   Boolean  @default(false) // §13.2: vet bookings by default
+  timezone      String   @default("Africa/Tunis")
+  createdAt     DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+
+  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  specialty    Specialty               @relation(fields: [specialtyId], references: [id])
+  clinics      Clinic[]
+  availability AvailabilityRule[]
+  exceptions   AvailabilityException[]
+  links        PatientDoctorLink[]
+
+  @@index([specialtyId])
+  @@index([isPublished])
+}
+
+model Specialty {
+  id      String          @id @default(cuid())
+  slug    String          @unique
+  name    Json // { fr, ar }
+  doctors DoctorProfile[]
+}
+
+model PatientProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  firstName   String
+  lastName    String
+  dateOfBirth DateTime @db.Date
+  sex         Sex
+  phone       String
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
+
+  // §3.1: the ONLY structured clinical field. Known drug allergies, kept for
+  // prescribing safety, cross-doctor visible, envelope-encrypted, nullable.
+  // An empty value is disambiguated in the UI ("not recorded" vs an explicit
+  // "no known drug allergies" affirmation) — never rendered as a clean blank.
+  allergiesEnc          Bytes?
+  allergiesAffirmedNone Boolean   @default(false)
+  allergiesUpdatedAt    DateTime? @db.Timestamptz(3)
+
+  user  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links PatientDoctorLink[]
+}
+
+// ---------------------------------------------------------------------------
+// The security boundary (§2)
+// ---------------------------------------------------------------------------
+
+/// Every clinical query joins through this. A doctor may read a patient's data
+/// IFF an ACTIVE link exists between them. Not a role, not a flag — this row.
+model PatientDoctorLink {
+  id        String     @id @default(cuid())
+  patientId String
+  doctorId  String
+  status    LinkStatus @default(ACTIVE)
+  source    LinkSource
+  createdAt DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime   @updatedAt @db.Timestamptz(3)
+
+  patient      PatientProfile     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+  doctor       DoctorProfile      @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+  threads      MessageThread[]
+  documents    Document[]
+  notes        ConsultationNote[]
+
+  @@unique([patientId, doctorId])
+  @@index([doctorId, status])
+  @@index([patientId, status])
+}
+
+// ---------------------------------------------------------------------------
+// Scheduling (§6)
+// ---------------------------------------------------------------------------
+
+model Clinic {
+  id       String  @id @default(cuid())
+  doctorId String
+  name     String
+  address  Json // { line1, city, postalCode, country, geo }
+  phone    String?
+
+  doctor       DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+  appointments Appointment[]
+
+  @@index([doctorId])
+}
+
+/// Recurring weekly availability, expressed in the doctor's LOCAL time (§6).
+model AvailabilityRule {
+  id          String    @id @default(cuid())
+  doctorId    String
+  clinicId    String
+  weekday     Int // 0-6
+  startLocal  String // "09:00"
+  endLocal    String // "13:00"
+  slotMinutes Int       @default(20)
+  validFrom   DateTime  @db.Timestamptz(3)
+  validUntil  DateTime? @db.Timestamptz(3)
+
+  doctor DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId])
+}
+
+/// One-off overrides: holidays, conferences, extra clinics (§6).
+model AvailabilityException {
+  id         String   @id @default(cuid())
+  doctorId   String
+  date       DateTime @db.Date
+  isClosed   Boolean  @default(true)
+  startLocal String?
+  endLocal   String?
+
+  doctor DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@index([doctorId, date])
+}
+
+model Appointment {
+  id           String            @id @default(cuid())
+  linkId       String
+  clinicId     String
+  startAt      DateTime          @db.Timestamptz(3) // always UTC
+  endAt        DateTime          @db.Timestamptz(3)
+  status       AppointmentStatus @default(REQUESTED)
+  reasonEnc    Bytes? // §3.1: reason-for-visit is sensitive; encrypted
+  cancelledBy  String?
+  cancelReason String?
+  createdAt    DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime          @updatedAt @db.Timestamptz(3)
+
+  link   PatientDoctorLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  clinic Clinic            @relation(fields: [clinicId], references: [id])
+
+  // NOTE: the no-overlap exclusion constraint (§3) is added by raw SQL in a
+  // follow-up migration; Prisma can't express EXCLUDE USING gist.
+  @@index([clinicId, startAt])
+  @@index([linkId])
+  @@index([status])
+}
+
+// ---------------------------------------------------------------------------
+// Clinical content — all envelope-encrypted (§3.1, §10)
+// ---------------------------------------------------------------------------
+
+/// Doctor's private clinical reasoning. Never crosses a practice boundary (§2).
+///
+/// A note is a legal record: edits never overwrite history. Each deliberate
+/// save appends a ConsultationNoteRevision, and a mistaken entry is RETRACTED
+/// (struck through, reason recorded) rather than deleted.
+model ConsultationNote {
+  id             String     @id @default(cuid())
+  linkId         String
+  appointmentId  String?
+  contentEnc     Bytes
+  authorUserId   String
+  status         NoteStatus @default(ACTIVE)
+  retractedAt    DateTime?  @db.Timestamptz(3)
+  retractedBy    String?
+  retractReason  String?
+  /// Drives revision coalescing — see src/lib/clinical/notes.validation.ts.
+  lastRevisionAt DateTime   @db.Timestamptz(3)
+  createdAt      DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
+
+  link      PatientDoctorLink         @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  revisions ConsultationNoteRevision[]
+
+  @@index([linkId, createdAt])
+  @@index([appointmentId])
+}
+
+/// Append-only. No application code updates or deletes these rows — the same
+/// rule that governs AuditLog.
+model ConsultationNoteRevision {
+  id           String         @id @default(cuid())
+  noteId       String
+  contentEnc   Bytes
+  authorUserId String
+  reason       RevisionReason
+  createdAt    DateTime       @default(now()) @db.Timestamptz(3)
+
+  note ConsultationNote @relation(fields: [noteId], references: [id], onDelete: Cascade)
+
+  @@index([noteId, createdAt])
+}
+
+/// Belongs to the patient. Immutable once issued; corrections create a new
+/// version pointing at supersedesId (§8). Content is immutable once issued;
+/// the lifecycle flag and the version chain are the only things that change.
+model Document {
+  id             String         @id @default(cuid())
+  linkId         String
+  type           DocumentType
+  status         DocumentStatus @default(ACTIVE)
+  storageKey     String // opaque object key; bytes served via authorized proxy (§4b)
+  contentType    String         @default("application/pdf")
+  byteSize       Int
+  checksum       String // sha256 hex of the stored bytes
+  version        Int            @default(1)
+  supersedesId   String?        @unique // the Document this one replaces (linear chain)
+  revokedAt      DateTime?      @db.Timestamptz(3)
+  revokedBy      String?
+  revokeReason   String?
+  issuedByUserId String
+  issuedAt       DateTime       @default(now()) @db.Timestamptz(3)
+
+  link         PatientDoctorLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  supersedes   Document?         @relation("DocumentVersion", fields: [supersedesId], references: [id])
+  supersededBy Document?         @relation("DocumentVersion")
+  prescription Prescription?
+
+  @@index([linkId, issuedAt])
+}
+
+/// Structured payload for a PRESCRIPTION document (1:1). All clinical free text
+/// is envelope-encrypted (§3.1, §10).
+model Prescription {
+  id                 String   @id @default(cuid())
+  documentId         String   @unique
+  /// Encrypted JSON: [{ drug, dose, frequency?, durationDays?, instructions? }]
+  medicationsEnc     Bytes
+  notesEnc           Bytes?
+  /// Encrypted snapshot of the patient's allergy state AT ISSUANCE — proves
+  /// what the doctor acknowledged reviewing.
+  allergySnapshotEnc Bytes
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+model MessageThread {
+  id            String    @id @default(cuid())
+  linkId        String
+  subject       String?
+  lastMessageAt DateTime? @db.Timestamptz(3)
+  closedAt      DateTime? @db.Timestamptz(3)
+  createdAt     DateTime  @default(now()) @db.Timestamptz(3)
+
+  link     PatientDoctorLink @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  messages Message[]
+
+  @@index([linkId])
+}
+
+model Message {
+  id           String    @id @default(cuid())
+  threadId     String
+  senderUserId String
+  bodyEnc      Bytes
+  attachments  Json?
+  readAt       DateTime? @db.Timestamptz(3)
+  createdAt    DateTime  @default(now()) @db.Timestamptz(3)
+
+  thread MessageThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId])
+}
+
+// ---------------------------------------------------------------------------
+// Transactional outbox (§6)
+// ---------------------------------------------------------------------------
+
+/// Notification intent, written in the SAME transaction as the thing it
+/// describes.
+///
+/// Calling boss.send() around the transaction leaves two bad options: send
+/// before commit (a patient gets "your appointment is confirmed" for a booking
+/// that then rolls back) or send after commit (a crash in between loses the
+/// reminder silently). A phantom SMS about a non-existent medical appointment
+/// is the worse failure, and neither is acceptable.
+///
+/// pg-boss v12 CAN enlist in a Prisma transaction via `fromPrisma(tx)`, which
+/// would make this table redundant. We deliberately don't use it: pg-boss
+/// requires a queue to exist before send, so an unprovisioned or unhealthy
+/// queue would abort the booking transaction. Booking is the critical path and
+/// notifications are not — a patient must still be able to book when the queue
+/// is down. Writing to our own table cannot fail that way, and the dispatcher
+/// drains it onto pg-boss afterwards.
+///
+/// If the booking rolls back, the intent vanishes with it.
+model OutboxMessage {
+  id           String       @id @default(cuid())
+  topic        String // "appointment.confirmation" | "appointment.reminder" | …
+  payload      Json
+  /// When the job should RUN (a T-24h reminder is scheduled, not immediate).
+  scheduledFor DateTime     @db.Timestamptz(3)
+  status       OutboxStatus @default(PENDING)
+  attempts     Int          @default(0)
+  lastError    String?
+  dispatchedAt DateTime?    @db.Timestamptz(3)
+  createdAt    DateTime     @default(now()) @db.Timestamptz(3)
+
+  @@index([status, scheduledFor])
+}
+
+// ---------------------------------------------------------------------------
+// Audit (§10) — append-only. No app code updates or deletes these rows.
+// ---------------------------------------------------------------------------
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  actorUserId  String?
+  actorRole    String
+  action       String // "document.read", "note.update", "patient.search"
+  resourceType String
+  resourceId   String
+  patientId    String? // denormalized: answers "who touched this patient's data?"
+  ip           String?
+  userAgent    String?
+  metadata     Json?
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+
+  @@index([patientId, createdAt])
+  @@index([actorUserId, createdAt])
+  @@index([resourceType, resourceId])
+}

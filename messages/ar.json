@@ -1,0 +1,41 @@
+{
+  "common": {
+    "appName": "Medic",
+    "loading": "جارٍ التحميل…",
+    "book": "حجز موعد",
+    "login": "تسجيل الدخول",
+    "logout": "تسجيل الخروج",
+    "register": "إنشاء حساب",
+    "cancel": "إلغاء",
+    "save": "حفظ",
+    "search": "بحث"
+  },
+  "nav": {
+    "doctors": "الأطباء",
+    "howItWorks": "كيف يعمل",
+    "myAppointments": "مواعيدي",
+    "myDoctors": "أطبائي",
+    "messages": "الرسائل",
+    "documents": "المستندات"
+  },
+  "landing": {
+    "heroTitle": "اعثر على طبيبك واحجز موعدًا",
+    "heroSubtitle": "اطّلع على الملفات، اختر طبيبًا، وأدِر مواعيدك من مكان واحد.",
+    "ctaBrowse": "استكشف الأطباء"
+  },
+  "directory": {
+    "title": "أطباؤنا",
+    "filterSpecialty": "التخصص",
+    "filterCity": "المدينة",
+    "empty": "لا يوجد طبيب يطابق بحثك.",
+    "viewProfile": "عرض الملف"
+  },
+  "spaces": {
+    "patient": "فضاء المريض",
+    "doctor": "فضاء الطبيب",
+    "admin": "الإدارة"
+  },
+  "safety": {
+    "notForEmergencies": "هذه الخدمة ليست مخصّصة للحالات الطارئة. في حال الطوارئ اتصل بالإسعاف."
+  }
+}

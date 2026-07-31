@@ -1,0 +1,7 @@
+{
+  "//": "For tsx-run tests/scripts that import JSX (PDF templates). The base tsconfig uses jsx:preserve for Next; esbuild needs an explicit transform. react-jsx = automatic runtime, so no React import is required.",
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  }
+}

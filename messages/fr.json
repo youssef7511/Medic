@@ -1,0 +1,41 @@
+{
+  "common": {
+    "appName": "Medic",
+    "loading": "Chargement…",
+    "book": "Prendre rendez-vous",
+    "login": "Se connecter",
+    "logout": "Se déconnecter",
+    "register": "Créer un compte",
+    "cancel": "Annuler",
+    "save": "Enregistrer",
+    "search": "Rechercher"
+  },
+  "nav": {
+    "doctors": "Médecins",
+    "howItWorks": "Comment ça marche",
+    "myAppointments": "Mes rendez-vous",
+    "myDoctors": "Mes médecins",
+    "messages": "Messages",
+    "documents": "Documents"
+  },
+  "landing": {
+    "heroTitle": "Trouvez votre médecin et prenez rendez-vous",
+    "heroSubtitle": "Consultez les profils, choisissez un médecin, et gérez vos rendez-vous en un seul endroit.",
+    "ctaBrowse": "Découvrir les médecins"
+  },
+  "directory": {
+    "title": "Nos médecins",
+    "filterSpecialty": "Spécialité",
+    "filterCity": "Ville",
+    "empty": "Aucun médecin ne correspond à votre recherche.",
+    "viewProfile": "Voir le profil"
+  },
+  "spaces": {
+    "patient": "Espace patient",
+    "doctor": "Espace médecin",
+    "admin": "Administration"
+  },
+  "safety": {
+    "notForEmergencies": "Ce service n'est pas destiné aux urgences. En cas d'urgence, appelez les secours."
+  }
+}
