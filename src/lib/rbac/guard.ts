@@ -139,3 +139,65 @@ export async function requireLinkAny(
   }
   throw new ResourceNotFoundError();
 }
+
+/**
+ * Succeeds if the actor passes requireLinkAny on the document's link,
+ * OR is a DOCTOR with an ACTIVE DocumentShare on this document.
+ *
+ * The first path is the fast path (same-link, no extra query). The share
+ * path fires only when the link check failed — a cold read for shared docs.
+ *
+ * Both paths preserve the 404-not-403 discipline (§5).
+ */
+export async function requireLinkOrShare(
+  actor: Actor,
+  documentId: string,
+  permissions: Permission[],
+): Promise<{ patientId: string; via: 'link' | 'share'; shareId?: string }> {
+  // Load the document to find its link (for the link path) and patientId.
+  const doc = await prisma.document.findUnique({
+    where: { id: documentId },
+    select: {
+      linkId: true,
+      link: { select: { patientId: true } },
+    },
+  });
+  if (!doc) throw new ResourceNotFoundError();
+
+  const patientId = doc.link.patientId;
+
+  // Fast path: does the actor have a same-link authorization?
+  for (const permission of permissions) {
+    try {
+      await requireLink(actor, doc.linkId, permission);
+      return { patientId, via: 'link' };
+    } catch (e) {
+      if (!(e instanceof ResourceNotFoundError)) throw e;
+    }
+  }
+
+  // Slow path: is the actor a DOCTOR with an ACTIVE share on this document?
+  // Question 1 — does any role grant document:read at all?
+  if (!hasPermission(actor, 'document:read')) {
+    throw new ResourceNotFoundError();
+  }
+
+  // Resolve the doctor profile id from the actor's DOCTOR role assignment.
+  const doctorRole = activeRoles(actor).find(
+    (r) => r.role === Role.DOCTOR && r.scopeType === ScopeType.DOCTOR && r.scopeId,
+  );
+  if (!doctorRole?.scopeId) throw new ResourceNotFoundError();
+
+  const share = await prisma.documentShare.findUnique({
+    where: {
+      documentId_doctorId: { documentId, doctorId: doctorRole.scopeId },
+    },
+    select: { id: true, status: true },
+  });
+
+  if (!share || share.status !== 'ACTIVE') {
+    throw new ResourceNotFoundError();
+  }
+
+  return { patientId, via: 'share', shareId: share.id };
+}

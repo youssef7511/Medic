@@ -4,7 +4,7 @@ import { prisma } from '@/lib/db';
 import { audit } from '@/lib/audit';
 import { createHash } from 'node:crypto';
 import { encryptText, decryptText, encryptOptional } from '@/lib/crypto/envelope';
-import { requireLink, requireLinkAny, ResourceNotFoundError, type Actor } from '@/lib/rbac/guard';
+import { requireLink, requireLinkAny, requireLinkOrShare, ResourceNotFoundError, type Actor } from '@/lib/rbac/guard';
 import { getObjectStore, newObjectKey } from '@/lib/storage';
 import { readAllergyState, type AllergyState } from '@/lib/clinical/allergies';
 import { renderPrescriptionPdf } from './render';
@@ -288,9 +288,10 @@ export async function revokeDocument(
 }
 
 /**
- * The download path. Authorizes either party on the link, audits EVERY read
- * (§10 — a document can leave the practice, unlike a note), and verifies the
- * stored bytes still match the checksum before serving them.
+ * The download path. Authorizes either party on the link, or a doctor holding
+ * an active share (Phase 4c). Audits EVERY read (§10 — a document can leave
+ * the practice, unlike a note), and verifies the stored bytes still match the
+ * checksum before serving them.
  */
 export async function getDocumentForDownload(
   actor: Actor,
@@ -302,7 +303,8 @@ export async function getDocumentForDownload(
   });
   if (!doc) throw new ResourceNotFoundError();
 
-  const link = await requireLinkAny(actor, doc.linkId, ['document:read:own', 'document:read']);
+  // §4c: try same-link first, then fall back to share-mediated access.
+  const auth = await requireLinkOrShare(actor, doc.id, ['document:read:own', 'document:read']);
 
   const stored = await getObjectStore().get(doc.storageKey);
   const actual = createHash('sha256').update(stored.body).digest('hex');
@@ -316,7 +318,8 @@ export async function getDocumentForDownload(
     action: 'document.read',
     resourceType: 'Document',
     resourceId: doc.id,
-    patientId: link.patientId,
+    patientId: auth.patientId,
+    metadata: auth.via === 'share' ? { via: 'share', shareId: auth.shareId } : undefined,
   });
 
   return { meta: toView(doc, 'fr'), bytes: stored.body, contentType: doc.contentType };

@@ -23,6 +23,8 @@ export default async function DoctorLayout({
     { href: '/d', label: ar ? 'المواعيد' : 'Rendez-vous' },
     { href: '/d/calendar', label: ar ? 'التقويم' : 'Agenda' },
     { href: '/d/availability', label: ar ? 'ساعات العمل' : 'Disponibilités' },
+    { href: '/d/threads', label: ar ? 'المحادثات' : 'Conversations' },
+    { href: '/d/shared-documents', label: ar ? 'مستندات مشتركة' : 'Documents partagés' },
   ];
 
   return (

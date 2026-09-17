@@ -57,11 +57,17 @@ export default async function PatientHubPage({
                   <Link href={`/p/doctors/${doctor.id}/book`} className="text-brand-600 hover:underline">
                     {t('common.book')}
                   </Link>
-                  <Link
+                   <Link
                     href={`/p/doctors/${doctor.id}/documents`}
                     className="text-brand-600 hover:underline"
                   >
                     {ar ? 'المستندات' : 'Documents'}
+                  </Link>
+                  <Link
+                    href={`/p/doctors/${doctor.id}/messages`}
+                    className="text-brand-600 hover:underline"
+                  >
+                    {ar ? 'الرسائل' : 'Messages'}
                   </Link>
                 </div>
               </li>

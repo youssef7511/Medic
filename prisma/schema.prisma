@@ -97,6 +97,11 @@ enum RevisionReason {
   RETRACT
 }
 
+enum ShareStatus {
+  ACTIVE
+  REVOKED
+}
+
 // ---------------------------------------------------------------------------
 // Identity & access
 // ---------------------------------------------------------------------------
@@ -202,6 +207,7 @@ model DoctorProfile {
   availability AvailabilityRule[]
   exceptions   AvailabilityException[]
   links        PatientDoctorLink[]
+  sharedDocuments DocumentShare[]
 
   @@index([specialtyId])
   @@index([isPublished])
@@ -405,6 +411,7 @@ model Document {
   supersedes   Document?         @relation("DocumentVersion", fields: [supersedesId], references: [id])
   supersededBy Document?         @relation("DocumentVersion")
   prescription Prescription?
+  shares       DocumentShare[]
 
   @@index([linkId, issuedAt])
 }
@@ -423,6 +430,27 @@ model Prescription {
   createdAt          DateTime @default(now()) @db.Timestamptz(3)
 
   document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+}
+
+/// Patient-initiated document sharing (§2, Phase 4c). The first deliberate
+/// hole in the link boundary: a patient explicitly shares one document with
+/// a doctor who may have no other relationship with them. Share pins the
+/// exact documentId — superseding creates a new version; the patient must
+/// explicitly share it again.
+model DocumentShare {
+  id             String      @id @default(cuid())
+  documentId     String
+  doctorId       String      // target doctor — may have no PatientDoctorLink to this patient
+  sharedByUserId String      // must be the owning patient (enforced in app layer)
+  status         ShareStatus @default(ACTIVE)
+  createdAt      DateTime    @default(now()) @db.Timestamptz(3)
+  revokedAt      DateTime?   @db.Timestamptz(3)
+
+  document Document      @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  doctor   DoctorProfile @relation(fields: [doctorId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, doctorId])
+  @@index([doctorId, status])
 }
 
 model MessageThread {
