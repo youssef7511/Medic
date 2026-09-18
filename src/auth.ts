@@ -6,6 +6,7 @@ import { UserStatus } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { verifyPassword, fakeVerify } from '@/lib/auth/password';
 import { rolesRequireMfa, verifyMfaToken } from '@/lib/auth/totp';
+import { clearLoginFailures, isLoginLocked, recordLoginFailure } from '@/lib/auth/lockout';
 
 // Distinct codes so the UI can ask for a TOTP code without ever revealing
 // whether the email/password pair was valid to an unauthenticated caller.
@@ -64,7 +65,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           return null;
         }
 
-        if (!(await verifyPassword(password, user.passwordHash))) return null;
+        if (!(await verifyPassword(password, user.passwordHash))) {
+          // Do not extend an existing lock on every bad request; otherwise an
+          // attacker could keep a known account locked forever.
+          if (!isLoginLocked(user.lockedUntil)) await recordLoginFailure(user.id);
+          return null;
+        }
+
+        // Check only after password verification so lock state is not an
+        // account-enumeration oracle.
+        if (isLoginLocked(user.lockedUntil)) return null;
 
         if (user.status !== UserStatus.ACTIVE) throw new AccountSuspendedError();
 
@@ -73,8 +83,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (rolesRequireMfa(user.roleAssignments)) {
           if (!user.mfaSecret) throw new MfaEnrollmentRequiredError();
           if (!totp) throw new MfaRequiredError();
-          if (!verifyMfaToken(totp, user.mfaSecret)) throw new MfaRequiredError();
+          if (!verifyMfaToken(totp, user.mfaSecret)) {
+            await recordLoginFailure(user.id);
+            throw new MfaRequiredError();
+          }
         }
+
+        await clearLoginFailures(user.id);
 
         // Session row backs immediate revocation (§10): delete/revoke the row
         // and the next request fails, regardless of JWT expiry.

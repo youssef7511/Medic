@@ -22,7 +22,7 @@ export default async function AllergiesPage({
     select: { allergiesEnc: true, allergiesAffirmedNone: true },
   });
 
-  const initialText = profile?.allergiesEnc ? decryptText(profile.allergiesEnc) : '';
+  const initialText = profile?.allergiesEnc ? await decryptText(profile.allergiesEnc) : '';
 
   return (
     <section className="max-w-xl">

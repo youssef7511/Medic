@@ -1,3 +1,5 @@
+# First run: copy .env.docker.example to .env.docker, fill it locally, then use
+# `docker compose --env-file .env.docker up --build`.
 services:
   app:
     build:
@@ -18,9 +20,9 @@ services:
   pg:
     image: postgres:16-alpine
     environment:
-      - POSTGRES_USER=medic
-      - POSTGRES_PASSWORD=medic
-      - POSTGRES_DB=medic
+      - POSTGRES_USER=${POSTGRES_USER:?Set POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:?Set POSTGRES_DB}
     ports:
       - "5432:5432"
     volumes:
@@ -30,8 +32,8 @@ services:
     image: minio/minio
     command: server /data --console-address :9001
     environment:
-      - MINIO_ROOT_USER=medic
-      - MINIO_ROOT_PASSWORD=medicminio
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:?Set MINIO_ROOT_USER}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD}
     ports:
       - "9000:9000"
       - "9001:9001"

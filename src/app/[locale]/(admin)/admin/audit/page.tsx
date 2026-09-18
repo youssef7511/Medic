@@ -1,8 +1,8 @@
 import { notFound, redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getCurrentActor } from '@/lib/auth/session';
 import { hasPermission } from '@/lib/rbac/guard';
 import { prisma } from '@/lib/db';
+import { Link } from '@/i18n/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -71,7 +71,7 @@ export default async function AdminAuditPage({
           {ar ? 'الكل' : 'Tous'}
         </Link>
         {actionTypes.map((at) => (
-<Link
+          <Link
             key={at.action}
             href={`/admin/audit?action=${encodeURIComponent(at.action)}`}
             className={`rounded-full px-3 py-1 text-xs font-medium ${

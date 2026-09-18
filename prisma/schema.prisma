@@ -103,33 +103,63 @@ enum ShareStatus {
   REVOKED
 }
 
+enum BreakGlassStatus {
+  ACTIVE
+  REVOKED
+}
+
 // ---------------------------------------------------------------------------
 // Identity & access
 // ---------------------------------------------------------------------------
 
 model User {
-  id               String     @id @default(cuid())
-  email            String?    @unique
-  phone            String?    @unique
-  passwordHash     String?
-  emailVerified    DateTime?  @db.Timestamptz(3)
-  locale           String     @default("fr")
-  status           UserStatus @default(ACTIVE)
-  mfaSecret        String? // required for DOCTOR + DOCTOR_STAFF + admin roles (§10)
+  id                  String     @id @default(cuid())
+  email               String?    @unique
+  phone               String?    @unique
+  passwordHash        String?
+  emailVerified       DateTime?  @db.Timestamptz(3)
+  locale              String     @default("fr")
+  status              UserStatus @default(ACTIVE)
+  mfaSecret           String? // required for DOCTOR + DOCTOR_STAFF + admin roles (§10)
   /// Secret generated during enrollment, promoted to mfaSecret only once the
   /// user proves they can produce a valid code. Keeping it separate means a
   /// half-finished enrollment can never lock someone out of their account.
-  mfaPendingSecret String?
-  createdAt        DateTime   @default(now()) @db.Timestamptz(3)
-  updatedAt        DateTime   @updatedAt @db.Timestamptz(3)
+  mfaPendingSecret    String?
+  failedLoginAttempts Int        @default(0)
+  lockedUntil         DateTime?  @db.Timestamptz(3)
+  createdAt           DateTime   @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
 
-  patientProfile  PatientProfile?
-  doctorProfile   DoctorProfile?
-  roleAssignments RoleAssignment[]
-  consents        Consent[]
-  sessions        Session[]
+  patientProfile            PatientProfile?
+  doctorProfile             DoctorProfile?
+  roleAssignments           RoleAssignment[]
+  consents                  Consent[]
+  sessions                  Session[]
+  mfaEnrollmentTokens       MfaEnrollmentToken[] @relation("MfaEnrollmentSubject")
+  issuedMfaEnrollmentTokens MfaEnrollmentToken[] @relation("MfaEnrollmentIssuer")
+  breakGlassGrants          BreakGlassGrant[]    @relation("BreakGlassActor")
+  verifiedDoctorProfiles    DoctorProfile[]      @relation("DoctorLicenseVerifier")
 
   @@index([status])
+}
+
+/// Admin-issued, short-lived, one-time proof required before a privileged user
+/// can bind an authenticator. Only a SHA-256 digest is stored; the raw token is
+/// shown to the issuing admin exactly once and delivered out-of-band.
+model MfaEnrollmentToken {
+  id              String    @id @default(cuid())
+  userId          String
+  tokenHash       String    @unique
+  createdByUserId String
+  expiresAt       DateTime  @db.Timestamptz(3)
+  usedAt          DateTime? @db.Timestamptz(3)
+  revokedAt       DateTime? @db.Timestamptz(3)
+  createdAt       DateTime  @default(now()) @db.Timestamptz(3)
+
+  user      User @relation("MfaEnrollmentSubject", fields: [userId], references: [id], onDelete: Cascade)
+  createdBy User @relation("MfaEnrollmentIssuer", fields: [createdByUserId], references: [id], onDelete: Restrict)
+
+  @@index([userId, expiresAt])
 }
 
 /// Auth.js session persistence + server-side revocation (§10): deleting a row
@@ -170,7 +200,9 @@ model RoleAssignment {
   userId    String
   role      Role
   scopeType ScopeType @default(GLOBAL)
-  scopeId   String? // doctorId when scopeType = DOCTOR
+  /// Stable non-null discriminator. GLOBAL is used for platform-wide roles;
+  /// otherwise this is the doctorProfile id when scopeType = DOCTOR.
+  scopeId   String    @default("GLOBAL")
   grantedBy String
   grantedAt DateTime  @default(now()) @db.Timestamptz(3)
   expiresAt DateTime? @db.Timestamptz(3)
@@ -187,31 +219,47 @@ model RoleAssignment {
 // ---------------------------------------------------------------------------
 
 model DoctorProfile {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  slug          String   @unique // /fr/doctors/dr-amine-benali
-  specialtyId   String
-  licenseNumber String // verified by a human super-admin before publish (§10)
-  bio           Json // { fr: "...", ar: "..." }
-  headline      Json
-  photoUrl      String?
-  languages     String[]
-  isPublished   Boolean  @default(false) // super-admin gates this
-  autoConfirm   Boolean  @default(false) // §13.2: vet bookings by default
-  timezone      String   @default("Africa/Tunis")
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  slug                String    @unique // /fr/doctors/dr-amine-benali
+  specialtyId         String
+  licenseNumber       String // verified by a human super-admin before publish (§10)
+  bio                 Json // { fr: "...", ar: "..." }
+  headline            Json
+  photoUrl            String?
+  languages           String[]
+  licenseVerifiedAt   DateTime? @db.Timestamptz(3)
+  licenseVerifiedById String?
+  isPublished         Boolean   @default(false) // super-admin gates this
+  autoConfirm         Boolean   @default(false) // §13.2: vet bookings by default
+  timezone            String    @default("Africa/Tunis")
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
 
-  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialty    Specialty               @relation(fields: [specialtyId], references: [id])
-  clinics      Clinic[]
-  availability AvailabilityRule[]
-  exceptions   AvailabilityException[]
-  links        PatientDoctorLink[]
-  sharedDocuments DocumentShare[]
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseVerifiedBy User?                   @relation("DoctorLicenseVerifier", fields: [licenseVerifiedById], references: [id], onDelete: SetNull)
+  specialty         Specialty               @relation(fields: [specialtyId], references: [id])
+  clinics           Clinic[]
+  availability      AvailabilityRule[]
+  exceptions        AvailabilityException[]
+  links             PatientDoctorLink[]
+  sharedDocuments   DocumentShare[]
 
   @@index([specialtyId])
   @@index([isPublished])
+  @@index([licenseVerifiedAt])
+}
+
+/// Singleton platform configuration managed from the Phase 6 admin space.
+/// Security-critical ceilings (MFA, break-glass duration, encryption) remain
+/// code-level invariants and cannot be weakened from this table.
+model PlatformSettings {
+  id                         String   @id @default("platform")
+  patientRegistrationEnabled Boolean  @default(true)
+  supportEmail               String?
+  supportPhone               String?
+  updatedByUserId            String?
+  updatedAt                  DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model Specialty {
@@ -240,8 +288,28 @@ model PatientProfile {
   allergiesAffirmedNone Boolean   @default(false)
   allergiesUpdatedAt    DateTime? @db.Timestamptz(3)
 
-  user  User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  links PatientDoctorLink[]
+  user             User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  links            PatientDoctorLink[]
+  breakGlassGrants BreakGlassGrant[]
+}
+
+/// Explicit emergency administrative access. Expiry is checked on every read;
+/// a row never grants standing permissions and cannot be extended in place.
+model BreakGlassGrant {
+  id          String           @id @default(cuid())
+  actorUserId String
+  patientId   String
+  reason      String
+  status      BreakGlassStatus @default(ACTIVE)
+  expiresAt   DateTime         @db.Timestamptz(3)
+  revokedAt   DateTime?        @db.Timestamptz(3)
+  createdAt   DateTime         @default(now()) @db.Timestamptz(3)
+
+  actor   User           @relation("BreakGlassActor", fields: [actorUserId], references: [id], onDelete: Restrict)
+  patient PatientProfile @relation(fields: [patientId], references: [id], onDelete: Restrict)
+
+  @@index([actorUserId, status, expiresAt])
+  @@index([patientId, createdAt])
 }
 
 // ---------------------------------------------------------------------------
@@ -366,7 +434,7 @@ model ConsultationNote {
   createdAt      DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt      DateTime   @updatedAt @db.Timestamptz(3)
 
-  link      PatientDoctorLink         @relation(fields: [linkId], references: [id], onDelete: Cascade)
+  link      PatientDoctorLink          @relation(fields: [linkId], references: [id], onDelete: Cascade)
   revisions ConsultationNoteRevision[]
 
   @@index([linkId, createdAt])
@@ -441,8 +509,8 @@ model Prescription {
 model DocumentShare {
   id             String      @id @default(cuid())
   documentId     String
-  doctorId       String      // target doctor — may have no PatientDoctorLink to this patient
-  sharedByUserId String      // must be the owning patient (enforced in app layer)
+  doctorId       String // target doctor — may have no PatientDoctorLink to this patient
+  sharedByUserId String // must be the owning patient (enforced in app layer)
   status         ShareStatus @default(ACTIVE)
   createdAt      DateTime    @default(now()) @db.Timestamptz(3)
   revokedAt      DateTime?   @db.Timestamptz(3)

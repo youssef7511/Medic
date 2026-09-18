@@ -62,7 +62,7 @@ async function loadOwnNote(actor: Actor, noteId: string, permission: 'note:read'
   return { note, link };
 }
 
-function toView(row: {
+async function toView(row: {
   id: string;
   contentEnc: Uint8Array;
   appointmentId: string | null;
@@ -71,10 +71,10 @@ function toView(row: {
   createdAt: Date;
   updatedAt: Date;
   _count?: { revisions: number };
-}): NoteView {
+}): Promise<NoteView> {
   return {
     id: row.id,
-    content: decryptText(row.contentEnc),
+    content: await decryptText(row.contentEnc),
     appointmentId: row.appointmentId,
     status: row.status,
     retractReason: row.retractReason,
@@ -93,7 +93,7 @@ export async function createNote(
 
   const link = await requireLink(actor, args.linkId, 'note:write');
   const now = new Date();
-  const contentEnc = encryptText(args.content);
+  const contentEnc = await encryptText(args.content);
 
   return prisma.$transaction(async (tx) => {
     const note = await tx.consultationNote.create({
@@ -149,7 +149,7 @@ export async function updateNote(
     note.updatedAt.getTime() !== args.expectedUpdatedAt.getTime();
 
   const now = new Date();
-  const contentEnc = encryptText(args.content);
+  const contentEnc = await encryptText(args.content);
   const writeRevision = shouldWriteRevision({
     explicit: args.explicit,
     lastRevisionAt: note.lastRevisionAt,
@@ -191,7 +191,7 @@ export async function updateNote(
       include: { _count: { select: { revisions: true } } },
     });
 
-    return { ...toView(updated), conflict };
+    return { ...(await toView(updated)), conflict };
   });
 }
 
@@ -247,7 +247,7 @@ export async function retractNote(
       metadata: { reason: args.reason.trim() },
     });
 
-    return toView(updated);
+      return toView(updated);
   });
 }
 
@@ -285,7 +285,7 @@ export async function getJournal(
     metadata: { noteCount: rows.length },
   });
 
-  return rows.map(toView);
+  return Promise.all(rows.map(toView));
 }
 
 export async function getRevisions(actor: Actor, noteId: string): Promise<RevisionView[]> {
@@ -296,10 +296,12 @@ export async function getRevisions(actor: Actor, noteId: string): Promise<Revisi
     orderBy: { createdAt: 'desc' },
   });
 
-  return rows.map((r) => ({
-    id: r.id,
-    content: decryptText(r.contentEnc),
-    reason: r.reason,
-    createdAt: r.createdAt,
-  }));
+  return Promise.all(
+    rows.map(async (r) => ({
+      id: r.id,
+      content: await decryptText(r.contentEnc),
+      reason: r.reason,
+      createdAt: r.createdAt,
+    })),
+  );
 }

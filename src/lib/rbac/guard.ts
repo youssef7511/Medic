@@ -182,15 +182,19 @@ export async function requireLinkOrShare(
     throw new ResourceNotFoundError();
   }
 
-  // Resolve the doctor profile id from the actor's DOCTOR role assignment.
-  const doctorRole = activeRoles(actor).find(
-    (r) => r.role === Role.DOCTOR && r.scopeType === ScopeType.DOCTOR && r.scopeId,
-  );
-  if (!doctorRole?.scopeId) throw new ResourceNotFoundError();
+  // A DOCTOR role is global; ownership is anchored by DoctorProfile.userId.
+  // Only DOCTOR_STAFF carries a doctorProfile id in its role scope.
+  const doctorRole = activeRoles(actor).find((r) => r.role === Role.DOCTOR);
+  if (!doctorRole) throw new ResourceNotFoundError();
+  const doctor = await prisma.doctorProfile.findUnique({
+    where: { userId: actor.userId },
+    select: { id: true },
+  });
+  if (!doctor) throw new ResourceNotFoundError();
 
   const share = await prisma.documentShare.findUnique({
     where: {
-      documentId_doctorId: { documentId, doctorId: doctorRole.scopeId },
+      documentId_doctorId: { documentId, doctorId: doctor.id },
     },
     select: { id: true, status: true },
   });

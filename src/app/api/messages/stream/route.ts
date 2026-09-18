@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
           for (const msg of newMessages) {
             const data = JSON.stringify({
               id: msg.id,
-              body: decryptText(msg.bodyEnc),
+              body: await decryptText(msg.bodyEnc),
               senderUserId: msg.senderUserId,
               isOwn: msg.senderUserId === actor.userId,
               createdAt: msg.createdAt.toISOString(),

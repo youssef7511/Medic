@@ -62,9 +62,9 @@ type DocWithRels = {
   };
 };
 
-function toView(doc: DocWithRels, locale: string): DocumentView {
+async function toView(doc: DocWithRels, locale: string): Promise<DocumentView> {
   const meds = doc.prescription
-    ? (JSON.parse(decryptText(doc.prescription.medicationsEnc)) as MedicationLine[])
+    ? (JSON.parse(await decryptText(doc.prescription.medicationsEnc)) as MedicationLine[])
     : [];
   return {
     id: doc.id,
@@ -123,6 +123,11 @@ export async function issuePrescription(
     args.notes,
     args.locale,
   );
+  const [medicationsEnc, notesEnc, allergySnapshotEnc] = await Promise.all([
+    encryptText(JSON.stringify(args.medications)),
+    encryptOptional(args.notes),
+    encryptText(JSON.stringify(allergyState)),
+  ]);
 
   try {
     const doc = await prisma.$transaction(async (tx) => {
@@ -138,9 +143,9 @@ export async function issuePrescription(
           issuedByUserId: actor.userId,
           prescription: {
             create: {
-              medicationsEnc: encryptText(JSON.stringify(args.medications)),
-              notesEnc: encryptOptional(args.notes),
-              allergySnapshotEnc: encryptText(JSON.stringify(allergyState)),
+              medicationsEnc,
+              notesEnc,
+              allergySnapshotEnc,
             },
           },
         },
@@ -199,6 +204,11 @@ export async function supersedePrescription(
     args.notes,
     args.locale,
   );
+  const [medicationsEnc, notesEnc, allergySnapshotEnc] = await Promise.all([
+    encryptText(JSON.stringify(args.medications)),
+    encryptOptional(args.notes),
+    encryptText(JSON.stringify(allergyState)),
+  ]);
 
   try {
     const doc = await prisma.$transaction(async (tx) => {
@@ -215,9 +225,9 @@ export async function supersedePrescription(
           issuedByUserId: actor.userId,
           prescription: {
             create: {
-              medicationsEnc: encryptText(JSON.stringify(args.medications)),
-              notesEnc: encryptOptional(args.notes),
-              allergySnapshotEnc: encryptText(JSON.stringify(allergyState)),
+              medicationsEnc,
+              notesEnc,
+              allergySnapshotEnc,
             },
           },
         },
@@ -322,7 +332,7 @@ export async function getDocumentForDownload(
     metadata: auth.via === 'share' ? { via: 'share', shareId: auth.shareId } : undefined,
   });
 
-  return { meta: toView(doc, 'fr'), bytes: stored.body, contentType: doc.contentType };
+  return { meta: await toView(doc, 'fr'), bytes: stored.body, contentType: doc.contentType };
 }
 
 /** The document timeline for one link. Audited once per view (like the journal). */
@@ -349,7 +359,7 @@ export async function listDocuments(
     metadata: { count: rows.length },
   });
 
-  return rows.map((r) => toView(r, locale));
+  return Promise.all(rows.map((r) => toView(r, locale)));
 }
 
 // --- internals --------------------------------------------------------------

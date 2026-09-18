@@ -11,8 +11,13 @@ const MFA_REQUIRED_ROLES: ReadonlySet<Role> = new Set([
   Role.SUPER_ADMIN,
 ]);
 
-export function rolesRequireMfa(roles: { role: Role }[]): boolean {
-  return roles.some((r) => MFA_REQUIRED_ROLES.has(r.role));
+export function rolesRequireMfa(
+  roles: { role: Role; expiresAt?: Date | null }[],
+  now = new Date(),
+): boolean {
+  return roles.some(
+    (r) => MFA_REQUIRED_ROLES.has(r.role) && (!r.expiresAt || r.expiresAt > now),
+  );
 }
 
 // Allow ±1 step (30s) for clock drift. Wider windows meaningfully weaken TOTP.

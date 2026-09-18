@@ -10,14 +10,14 @@ import { verifyLicenseAction, publishDoctorAction, type VerifyState } from './ac
  */
 export function VerifyDoctorButton({
   doctorId,
-  doctorName,
   isPublished,
+  licenseVerified,
   canPublish,
   locale,
 }: {
   doctorId: string;
-  doctorName: string;
   isPublished: boolean;
+  licenseVerified: boolean;
   canPublish: boolean;
   locale: string;
 }) {
@@ -35,14 +35,16 @@ export function VerifyDoctorButton({
 
   return (
     <div className="flex flex-col items-end gap-2">
-      <form action={verifyAction}>
-        <input type="hidden" name="doctorId" value={doctorId} />
-        <Button type="submit" size="sm" variant="outline" disabled={verifyPending}>
-          {ar ? 'تحقق من الترخيص' : 'Vérifier la licence'}
-        </Button>
-      </form>
+      {!licenseVerified && (
+        <form action={verifyAction}>
+          <input type="hidden" name="doctorId" value={doctorId} />
+          <Button type="submit" size="sm" variant="outline" disabled={verifyPending}>
+            {ar ? 'تحقق من الترخيص' : 'Vérifier la licence'}
+          </Button>
+        </form>
+      )}
 
-      {canPublish && (
+      {licenseVerified && canPublish && (
         <form action={publishAction}>
           <input type="hidden" name="doctorId" value={doctorId} />
           <Button type="submit" size="sm" disabled={publishPending}>
@@ -60,6 +62,11 @@ export function VerifyDoctorButton({
       {verifyState.ok && (
         <p className="text-xs text-green-600">
           {ar ? 'تم التحقق' : 'Licence vérifiée'}
+        </p>
+      )}
+      {licenseVerified && !publishState.ok && (
+        <p className="text-xs text-green-700">
+          {ar ? 'تم التحقق من الترخيص' : 'Licence vérifiée'}
         </p>
       )}
       {publishState.ok && (

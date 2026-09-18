@@ -24,6 +24,8 @@ yarn-error.log*
 .env
 .env*.local
 .env.production
+.env.docker
+!.env.docker.example
 
 # prisma
 /prisma/*.db

@@ -89,7 +89,7 @@ export async function bookAppointment(args: BookArgs) {
     select: { autoConfirm: true },
   });
 
-  const reasonEnc = encryptOptional(reason);
+  const reasonEnc = await encryptOptional(reason);
 
   try {
     return await prisma.$transaction(async (tx) => {
