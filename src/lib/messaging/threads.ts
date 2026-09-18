@@ -49,7 +49,7 @@ function validateMessageBody(body: string): string | null {
  */
 export async function listDoctorThreads(
   actor: Actor,
-  locale = 'fr',
+  _locale = 'fr',
 ): Promise<ThreadView[]> {
   const doctorProfile = await prisma.doctorProfile.findUnique({
     where: { userId: actor.userId },
@@ -97,7 +97,7 @@ export async function listDoctorThreads(
   const unreadMap = new Map(unreadCounts.map((u) => [u.threadId, u._count.id]));
   const lastMsgMap = new Map(lastMessages.map((m) => [m.threadId, m]));
 
-  return threads.map((t) => {
+  return Promise.all(threads.map(async (t) => {
     const lastMsg = lastMsgMap.get(t.id);
     return {
       id: t.id,
@@ -108,10 +108,10 @@ export async function listDoctorThreads(
       lastMessageAt: t.lastMessageAt,
       createdAt: t.createdAt,
       unreadCount: unreadMap.get(t.id) ?? 0,
-      lastMessagePreview: lastMsg ? decryptText(lastMsg.bodyEnc).slice(0, 100) : '',
+      lastMessagePreview: lastMsg ? (await decryptText(lastMsg.bodyEnc)).slice(0, 100) : '',
       lastMessageSenderUserId: lastMsg?.senderUserId ?? null,
     };
-  });
+  }));
 }
 
 /**
@@ -166,7 +166,7 @@ export async function listPatientThreads(
   const unreadMap = new Map(unreadCounts.map((u) => [u.threadId, u._count.id]));
   const lastMsgMap = new Map(lastMessages.map((m) => [m.threadId, m]));
 
-  return threads.map((t) => {
+  return Promise.all(threads.map(async (t) => {
     const lastMsg = lastMsgMap.get(t.id);
     const headline = t.link.doctor.headline as Record<string, string> | null;
     return {
@@ -178,10 +178,10 @@ export async function listPatientThreads(
       lastMessageAt: t.lastMessageAt,
       createdAt: t.createdAt,
       unreadCount: unreadMap.get(t.id) ?? 0,
-      lastMessagePreview: lastMsg ? decryptText(lastMsg.bodyEnc).slice(0, 100) : '',
+      lastMessagePreview: lastMsg ? (await decryptText(lastMsg.bodyEnc)).slice(0, 100) : '',
       lastMessageSenderUserId: lastMsg?.senderUserId ?? null,
     };
-  });
+  }));
 }
 
 /**
@@ -221,14 +221,16 @@ export async function getThread(
 
   return {
     thread: { id: thread.id, subject: thread.subject, linkId: thread.linkId },
-    messages: messages.map((m) => ({
-      id: m.id,
-      body: decryptText(m.bodyEnc),
-      senderUserId: m.senderUserId,
-      isOwn: m.senderUserId === actor.userId,
-      readAt: m.readAt,
-      createdAt: m.createdAt,
-    })),
+    messages: await Promise.all(
+      messages.map(async (m) => ({
+        id: m.id,
+        body: await decryptText(m.bodyEnc),
+        senderUserId: m.senderUserId,
+        isOwn: m.senderUserId === actor.userId,
+        readAt: m.readAt,
+        createdAt: m.createdAt,
+      })),
+    ),
   };
 }
 
@@ -261,7 +263,7 @@ export async function sendMessage(
   } else if (args.linkId) {
     // New thread — create it on the link.
     const permission = guardHasPermission(actor, 'message:send:clinical') ? 'message:send:clinical' : 'message:send:own' as const;
-    const link = await requireLink(actor, args.linkId, permission);
+    await requireLink(actor, args.linkId, permission);
 
     const existing = await prisma.messageThread.findFirst({
       where: { linkId: args.linkId },
@@ -283,7 +285,7 @@ export async function sendMessage(
     throw new MessageValidationError('missing_thread_or_link');
   }
 
-  const bodyEnc = encryptText(args.body.trim());
+  const bodyEnc = await encryptText(args.body.trim());
 
   const message = await prisma.$transaction(async (tx) => {
     const msg = await tx.message.create({

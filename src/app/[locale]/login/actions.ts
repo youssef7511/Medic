@@ -8,9 +8,16 @@ import { prisma } from '@/lib/db';
 import { hashPassword } from '@/lib/auth/password';
 import { defaultLandingFor, safeNextPath } from '@/lib/auth/redirects';
 import { audit } from '@/lib/audit';
+import { GLOBAL_SCOPE_ID } from '@/lib/admin/role-assignment';
+import { getPlatformSettings } from '@/lib/admin/platform-settings-service';
 
 export type AuthFormState = {
-  error?: 'invalid' | 'mfa_required' | 'mfa_enrollment_required' | 'account_suspended';
+  error?:
+    | 'invalid'
+    | 'mfa_required'
+    | 'mfa_enrollment_required'
+    | 'account_suspended'
+    | 'registration_disabled';
   email?: string;
 };
 
@@ -97,6 +104,11 @@ export async function registerAction(
   });
   if (!parsed.success) return { error: 'invalid' };
 
+  const settings = await getPlatformSettings();
+  if (!settings.patientRegistrationEnabled) {
+    return { error: 'registration_disabled' };
+  }
+
   const data = parsed.data;
   const existing = await prisma.user.findUnique({ where: { email: data.email } });
 
@@ -127,6 +139,7 @@ export async function registerAction(
           create: {
             role: Role.PATIENT,
             scopeType: ScopeType.GLOBAL,
+            scopeId: GLOBAL_SCOPE_ID,
             grantedBy: 'self-registration',
           },
         },

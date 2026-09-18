@@ -15,6 +15,7 @@ export function EnrollMfaForm() {
   // before promoting the pending secret.
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [enrollmentToken, setEnrollmentToken] = useState('');
 
   const state = confirmState.step === 'done' ? confirmState : beginState;
 
@@ -34,6 +35,7 @@ export function EnrollMfaForm() {
       <form action={confirmAction} className="space-y-4">
         <input type="hidden" name="email" value={email} />
         <input type="hidden" name="password" value={password} />
+        <input type="hidden" name="enrollmentToken" value={enrollmentToken} />
 
         <p className="text-sm text-gray-600">
           Scan this with your authenticator app, then enter the 6-digit code to finish.
@@ -105,6 +107,25 @@ export function EnrollMfaForm() {
           onChange={(e) => setEmail(e.target.value)}
           className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
         />
+      </div>
+
+      <div>
+        <label htmlFor="enrollmentToken" className="block text-sm font-medium">
+          Enrollment token
+        </label>
+        <input
+          id="enrollmentToken"
+          name="enrollmentToken"
+          type="password"
+          required
+          autoComplete="off"
+          value={enrollmentToken}
+          onChange={(e) => setEnrollmentToken(e.target.value)}
+          className="mt-1 w-full rounded border border-gray-300 px-3 py-2 font-mono"
+        />
+        <p className="mt-1 text-xs text-gray-500">
+          Use the single-use token provided by your administrator.
+        </p>
       </div>
 
       <div>

@@ -24,7 +24,7 @@ flag, that row. Every clinical path goes through `requireLink()` in
 Next.js 15 (App Router) · PostgreSQL + Prisma · Auth.js (credentials + TOTP) ·
 next-intl (fr + **ar/RTL**) · Tailwind · pg-boss (jobs).
 
-## Status — Phases 0, 2, 3 complete; Phase 4a + 4b complete
+## Status — Phases 0–6 complete; Phase 7 security hardening in progress
 
 Built, tested, and building clean (116 unit + 62 end-to-end):
 
@@ -37,16 +37,24 @@ Built, tested, and building clean (116 unit + 62 end-to-end):
   doctor/staff/admin roles, DB-backed sessions with **immediate revocation**,
   account-enumeration defences, validated `next` redirects (7 tests)
 - **Encryption** (§3.1) — AES-256-GCM envelope encryption with per-record data
-  keys for clinical free text (7 tests)
+  keys, AWS KMS wrap/unwrap in production, backward-compatible v1 reads and a
+  restartable rewrap migration
 - **Booking engine** (§6) — computed (never materialised) availability:
   rules − exceptions − booked − lead time − horizon, IANA-timezone correct
   incl. the Morocco DST trap (16 tests); booking transaction with link
   creation, auto-confirm (§13.2) and no-show gating (§13.4)
 - **Appointment lifecycle** (§6) — state machine (9 tests) driving cancel,
   confirm/decline, complete and no-show; patient and doctor UIs
-- **Notifications** (§6) — transactional outbox → pg-boss worker → SMS, with
-  T-24h/T-2h reminders scheduled only for confirmed appointments (9 tests)
-- **MFA enrollment** — QR-based first-login 2FA setup for privileged accounts
+- **Notifications** (§6) — transactional outbox → pg-boss worker → real SMS
+  through Twilio or a regional HTTP aggregator, with T-24h/T-2h reminders
+  scheduled only for confirmed appointments
+- **MFA enrollment** — QR-based first-login 2FA setup for privileged accounts,
+  gated by an admin-issued, 30-minute, single-use out-of-band token
+- **Break-glass** — SUPER_ADMIN-only, MFA re-confirmed, reason-required,
+  5–30-minute access; every read fails closed if audit fails and activation
+  transactionally schedules a patient SMS
+- **Auth hardening** — exponential login lockout, session revocation on account
+  suspension, nonce-based CSP and stricter browser security headers
 - **Consultation notes** (Phase 4a) — encrypted per-patient journal, immutable
   revision history, retract-with-reason (never deleted), server-side autosave
   with coalescing. Private to the authoring doctor; `DOCTOR_STAFF` and admins
@@ -67,15 +75,12 @@ Built, tested, and building clean (116 unit + 62 end-to-end):
 - **i18n + RTL** (§9) — fr/ar, locale routing, logical-property lint rule.
   Verified in a real browser: the whole grid mirrors, Monday lands on the right
 
-Stubbed / not yet built (marked `TODO` in-code):
+Remaining Phase 7 operational/legal work:
 
-- **KMS** — `ENCRYPTION_MASTER_KEY` comes from env; production needs a real KMS
-  (only `masterKey()` changes, §10)
-- **SMS/email provider** — `getNotifier()` returns a console adapter, so
-  **nothing is actually delivered yet**; wire the local aggregator
-- **Enrollment hardening** — 2FA enrollment authenticates by password alone.
-  An admin-issued single-use token (Phase 6) closes the pre-enrollment
-  password-leak window
+- Independent penetration test and remediation
+- Hosting jurisdiction decision, DPA/retention policy approval by local counsel
+- Production backup/restore drill and booking load test
+- Full RTL accessibility sweep and real-provider delivery monitoring
 - Real fonts (system fallbacks, `src/app/globals.css` §9)
 - Doctor calendar/availability editor (Phase 3), clinical/documents (Phase 4),
   messaging (Phase 5), admin (Phase 6)
@@ -87,6 +92,9 @@ Notifications need the background worker alongside the app:
 ```bash
 npm run worker     # drains the outbox onto pg-boss, then delivers
 ```
+
+Production KMS/SMS rollout and break-glass operating procedures are in
+[`docs/phase7-security-runbook.md`](docs/phase7-security-runbook.md).
 
 ### End-to-end verification
 

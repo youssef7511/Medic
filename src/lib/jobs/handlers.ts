@@ -4,10 +4,18 @@ import { getNotifier } from '@/lib/notifications/notifier';
 import { renderSms } from '@/lib/notifications/render';
 import { TOPICS, type Topic } from '@/lib/notifications/schedule';
 import type { Locale } from '@/i18n/config';
+import {
+  BREAK_GLASS_NOTIFICATION_TOPIC,
+  renderBreakGlassSms,
+} from '@/lib/notifications/security';
 
 interface AppointmentJob {
   appointmentId: string;
   kind?: string;
+}
+
+interface BreakGlassJob {
+  grantId: string;
 }
 
 /**
@@ -93,4 +101,32 @@ export async function registerHandlers(boss: PgBoss): Promise<void> {
       }
     });
   }
+
+  await boss.createQueue(BREAK_GLASS_NOTIFICATION_TOPIC, {
+    retryLimit: 8,
+    retryBackoff: true,
+  });
+  await boss.work<BreakGlassJob>(
+    BREAK_GLASS_NOTIFICATION_TOPIC,
+    async (jobs: { data: BreakGlassJob }[]) => {
+      for (const job of jobs) {
+        const grant = await prisma.breakGlassGrant.findUnique({
+          where: { id: job.data.grantId },
+          select: {
+            patient: {
+              select: {
+                phone: true,
+                user: { select: { locale: true } },
+              },
+            },
+          },
+        });
+        if (!grant?.patient.phone) continue;
+        await getNotifier().sendSms({
+          to: grant.patient.phone,
+          body: renderBreakGlassSms(grant.patient.user.locale),
+        });
+      }
+    },
+  );
 }

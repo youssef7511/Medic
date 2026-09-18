@@ -33,6 +33,6 @@ export async function readAllergyState(patientId: string): Promise<AllergyState>
   });
   if (!patient) return { kind: 'not_recorded' };
 
-  const text = patient.allergiesEnc ? decryptText(patient.allergiesEnc) : null;
+  const text = patient.allergiesEnc ? await decryptText(patient.allergiesEnc) : null;
   return classifyAllergy({ text, affirmedNone: patient.allergiesAffirmedNone });
 }

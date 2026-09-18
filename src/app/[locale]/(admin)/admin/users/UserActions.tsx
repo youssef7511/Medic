@@ -9,7 +9,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { suspendUserAction, reactivateUserAction, assignRoleAction, type UserActionState } from './actions';
+import {
+  suspendUserAction,
+  reactivateUserAction,
+  assignRoleAction,
+  issueMfaEnrollmentTokenAction,
+  type UserActionState,
+} from './actions';
 
 /**
  * User action controls (§6). Shows suspend/reactivate + role assignment.
@@ -17,18 +23,23 @@ import { suspendUserAction, reactivateUserAction, assignRoleAction, type UserAct
  */
 export function UserActions({
   userId,
-  userName,
+  userEmail,
   currentStatus,
+  mfaEnrolled,
+  doctorOptions,
   locale,
 }: {
   userId: string;
-  userName: string;
+  userEmail: string;
   currentStatus: string;
+  mfaEnrolled: boolean;
+  doctorOptions: Array<{ id: string; label: string }>;
   locale: string;
 }) {
   const ar = locale === 'ar';
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState('');
+  const [selectedDoctorId, setSelectedDoctorId] = useState('');
 
   const [suspendState, suspendAction, suspendPending] = useActionState<UserActionState, FormData>(
     suspendUserAction,
@@ -40,6 +51,10 @@ export function UserActions({
   );
   const [roleState, roleFormAction, rolePending] = useActionState<UserActionState, FormData>(
     assignRoleAction,
+    {},
+  );
+  const [mfaState, mfaAction, mfaPending] = useActionState<UserActionState, FormData>(
+    issueMfaEnrollmentTokenAction,
     {},
   );
 
@@ -57,12 +72,21 @@ export function UserActions({
 
   function handleAssignRole() {
     if (!selectedRole) return;
+    if (selectedRole === 'DOCTOR_STAFF' && !selectedDoctorId) return;
     const fd = new FormData();
     fd.set('userId', userId);
     fd.set('role', selectedRole);
+    if (selectedRole === 'DOCTOR_STAFF') fd.set('scopeId', selectedDoctorId);
     roleFormAction(fd);
     setRoleDialogOpen(false);
     setSelectedRole('');
+    setSelectedDoctorId('');
+  }
+
+  function handleIssueMfaToken() {
+    const fd = new FormData();
+    fd.set('userId', userId);
+    mfaAction(fd);
   }
 
   return (
@@ -81,26 +105,47 @@ export function UserActions({
         {ar ? 'دور' : 'Rôle'}
       </Button>
 
-      {(suspendState.error || reactivateState.error || roleState.error) && (
+      {!mfaEnrolled && (
+        <Button type="button" size="sm" variant="outline" onClick={handleIssueMfaToken} disabled={mfaPending}>
+          {ar ? 'رمز MFA' : 'Jeton MFA'}
+        </Button>
+      )}
+
+      {(suspendState.error || reactivateState.error || roleState.error || mfaState.error) && (
         <p role="alert" className="text-xs text-red-600">
-          {suspendState.error || reactivateState.error || roleState.error}
+          {suspendState.error || reactivateState.error || roleState.error || mfaState.error}
         </p>
       )}
       {(suspendState.ok || reactivateState.ok || roleState.ok) && (
         <p className="text-xs text-green-600">{ar ? 'تم' : 'Fait'}</p>
       )}
 
+      {mfaState.enrollmentToken && (
+        <div className="max-w-sm rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
+          <p className="font-semibold">
+            {ar ? 'انسخ الرمز الآن — سيظهر مرة واحدة فقط.' : 'Copiez maintenant — ce jeton ne sera affiché qu’une fois.'}
+          </p>
+          <code className="mt-1 block break-all select-all">{mfaState.enrollmentToken}</code>
+          <p className="mt-1 text-amber-700">
+            {ar ? 'تنتهي الصلاحية خلال 30 دقيقة.' : 'Expiration dans 30 minutes.'}
+          </p>
+        </div>
+      )}
+
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {ar ? `تعيين دور لـ ${userName}` : `Assigner un rôle à ${userName}`}
+              {ar ? `تعيين دور لـ ${userEmail}` : `Assigner un rôle à ${userEmail}`}
             </DialogTitle>
           </DialogHeader>
 
           <select
             value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
+            onChange={(e) => {
+              setSelectedRole(e.target.value);
+              if (e.target.value !== 'DOCTOR_STAFF') setSelectedDoctorId('');
+            }}
             className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
           >
             <option value="">{ar ? 'اختر دورًا…' : 'Sélectionner un rôle…'}</option>
@@ -110,11 +155,34 @@ export function UserActions({
             <option value="SUPER_ADMIN">SUPER_ADMIN</option>
           </select>
 
+          {selectedRole === 'DOCTOR_STAFF' && (
+            <div>
+              <label htmlFor={`doctor-scope-${userId}`} className="mb-1 block text-sm font-medium">
+                {ar ? 'الطبيب المرتبط بهذا الحساب' : 'Médecin rattaché à ce compte'}
+              </label>
+              <select
+                id={`doctor-scope-${userId}`}
+                value={selectedDoctorId}
+                onChange={(event) => setSelectedDoctorId(event.target.value)}
+                className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="">{ar ? 'اختر طبيبًا…' : 'Sélectionner un médecin…'}</option>
+                {doctorOptions.map((doctor) => (
+                  <option key={doctor.id} value={doctor.id}>{doctor.label}</option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={() => setRoleDialogOpen(false)}>
               {ar ? 'إلغاء' : 'Annuler'}
             </Button>
-            <Button type="button" disabled={!selectedRole || rolePending} onClick={handleAssignRole}>
+            <Button
+              type="button"
+              disabled={!selectedRole || (selectedRole === 'DOCTOR_STAFF' && !selectedDoctorId) || rolePending}
+              onClick={handleAssignRole}
+            >
               {ar ? 'تعيين' : 'Assigner'}
             </Button>
           </DialogFooter>
