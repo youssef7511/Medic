@@ -1,0 +1,43 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    env_file:
+      - .env.docker
+    depends_on:
+      - pg
+      - minio
+    volumes:
+      - ./.env.local:/app/.env.local:ro
+
+  pg:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=medic
+      - POSTGRES_PASSWORD=medic
+      - POSTGRES_DB=medic
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address :9001
+    environment:
+      - MINIO_ROOT_USER=medic
+      - MINIO_ROOT_PASSWORD=medicminio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+volumes:
+  pg_data:
+  minio_data:

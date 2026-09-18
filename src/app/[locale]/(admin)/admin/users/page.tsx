@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { getCurrentActor } from '@/lib/auth/session';
 import { hasPermission } from '@/lib/rbac/guard';
 import { prisma } from '@/lib/db';
@@ -53,7 +53,7 @@ export default async function AdminUsersPage({
       </h1>
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-start text-sm">
           <thead>
             <tr className="border-b border-gray-200 text-gray-500">
               <th className="px-4 py-2 font-medium">{ar ? 'الاسم' : 'Nom'}</th>

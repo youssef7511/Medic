@@ -3,7 +3,6 @@ import { getCurrentActor } from '@/lib/auth/session';
 import { ResourceNotFoundError } from '@/lib/rbac/guard';
 import { getThread } from '@/lib/messaging/threads';
 import { Link } from '@/i18n/navigation';
-import { MessageSquare } from 'lucide-react';
 import { MessageForm } from './MessageForm';
 
 export const dynamic = 'force-dynamic';

@@ -1,7 +1,6 @@
 'use client';
 
 import { useActionState } from 'react';
-import { useLocale } from 'next-intl';
 import { Button } from '@/components/ui/button';
 import { verifyLicenseAction, publishDoctorAction, type VerifyState } from './actions';
 
