@@ -2,7 +2,6 @@ import { notFound, redirect } from 'next/navigation';
 import { getCurrentActor } from '@/lib/auth/session';
 import { ResourceNotFoundError } from '@/lib/rbac/guard';
 import { getThread } from '@/lib/messaging/threads';
-import { prisma } from '@/lib/db';
 import { Link } from '@/i18n/navigation';
 import { MessageForm } from './MessageForm';
 

@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useActionState } from 'react';
-import { useLocale } from 'next-intl';
-import { Share2, X, Search, Check } from 'lucide-react';
+import { Share2, Search, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,

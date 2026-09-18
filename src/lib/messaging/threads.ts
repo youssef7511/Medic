@@ -49,7 +49,7 @@ function validateMessageBody(body: string): string | null {
  */
 export async function listDoctorThreads(
   actor: Actor,
-  locale = 'fr',
+  _locale = 'fr',
 ): Promise<ThreadView[]> {
   const doctorProfile = await prisma.doctorProfile.findUnique({
     where: { userId: actor.userId },
@@ -263,7 +263,7 @@ export async function sendMessage(
   } else if (args.linkId) {
     // New thread — create it on the link.
     const permission = guardHasPermission(actor, 'message:send:clinical') ? 'message:send:clinical' : 'message:send:own' as const;
-    const link = await requireLink(actor, args.linkId, permission);
+    await requireLink(actor, args.linkId, permission);
 
     const existing = await prisma.messageThread.findFirst({
       where: { linkId: args.linkId },

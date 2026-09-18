@@ -1,12 +1,12 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { z } from 'zod';
 import { getCurrentActor } from '@/lib/auth/session';
 import { hasPermission, ResourceNotFoundError } from '@/lib/rbac/guard';
 import { prisma } from '@/lib/db';
 import { audit } from '@/lib/audit';
 import { Role } from '@prisma/client';
+import { canPublishDoctor } from '@/lib/admin/doctor-onboarding';
 
 export type VerifyState = { error?: string; ok?: boolean };
 
@@ -31,18 +31,33 @@ export async function verifyLicenseAction(
 
   const doctor = await prisma.doctorProfile.findUnique({
     where: { id: doctorId },
-    select: { id: true, licenseNumber: true },
+    select: { id: true, licenseNumber: true, licenseVerifiedAt: true },
   });
   if (!doctor) throw new ResourceNotFoundError();
+  if (doctor.licenseVerifiedAt) return { error: 'License already verified.' };
 
-  await audit(prisma, {
-    actorUserId: actor.userId,
-    actorRole: Role.SUPER_ADMIN,
-    action: 'doctor.license_verified',
-    resourceType: 'DoctorProfile',
-    resourceId: doctorId,
-    metadata: { licenseNumber: doctor.licenseNumber },
+  const verified = await prisma.$transaction(async (tx) => {
+    const verifiedAt = new Date();
+    const result = await tx.doctorProfile.updateMany({
+      where: { id: doctorId, licenseVerifiedAt: null },
+      data: {
+        licenseVerifiedAt: verifiedAt,
+        licenseVerifiedById: actor.userId,
+      },
+    });
+    if (result.count === 0) return false;
+
+    await audit(tx, {
+      actorUserId: actor.userId,
+      actorRole: Role.SUPER_ADMIN,
+      action: 'doctor.license_verified',
+      resourceType: 'DoctorProfile',
+      resourceId: doctorId,
+      metadata: { licenseNumber: doctor.licenseNumber, verifiedAt: verifiedAt.toISOString() },
+    });
+    return true;
   });
+  if (!verified) return { error: 'License already verified.' };
 
   revalidatePath('/admin/doctors');
   return { ok: true };
@@ -69,10 +84,19 @@ export async function publishDoctorAction(
 
   const doctor = await prisma.doctorProfile.findUnique({
     where: { id: doctorId },
-    select: { id: true, isPublished: true },
+    select: {
+      id: true,
+      isPublished: true,
+      licenseVerifiedAt: true,
+      user: { select: { status: true } },
+    },
   });
   if (!doctor) throw new ResourceNotFoundError();
   if (doctor.isPublished) return { error: 'Already published.' };
+  if (doctor.user.status !== 'ACTIVE') return { error: 'Reactivate the user before publishing.' };
+  if (!canPublishDoctor(doctor)) {
+    return { error: 'Verify the medical license before publishing.' };
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.doctorProfile.update({

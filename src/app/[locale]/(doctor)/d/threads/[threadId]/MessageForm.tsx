@@ -1,7 +1,6 @@
 'use client';
 
 import { useRef, useEffect, useActionState } from 'react';
-import { useLocale } from 'next-intl';
 import { Send } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { sendMessageAction, type MessageState } from './actions';

@@ -13,6 +13,10 @@ import {
   hashMfaEnrollmentToken,
   mfaEnrollmentExpiry,
 } from '@/lib/auth/mfa-enrollment';
+import {
+  InvalidRoleScopeError,
+  resolveRoleScope,
+} from '@/lib/admin/role-assignment';
 
 export type UserActionState = {
   error?: string;
@@ -37,6 +41,7 @@ export async function suspendUserAction(
 
   const userId = formData.get('userId') as string;
   if (!userId) return { error: 'Missing userId.' };
+  if (userId === actor.userId) return { error: 'You cannot suspend your own account.' };
 
   const user = await prisma.user.findUnique({
     where: { id: userId },
@@ -131,8 +136,17 @@ export async function assignRoleAction(
     scopeId: formData.get('scopeId') || undefined,
   });
   if (!parsed.success) return { error: 'Invalid input.' };
-  const { userId, role } = parsed.data;
-  const scopeId = parsed.data.scopeId ?? undefined;
+  const { userId } = parsed.data;
+  const role = parsed.data.role as Role;
+  let scope: ReturnType<typeof resolveRoleScope>;
+  try {
+    scope = resolveRoleScope(role, parsed.data.scopeId);
+  } catch (error) {
+    if (error instanceof InvalidRoleScopeError) {
+      return { error: 'Select the doctor this staff account belongs to.' };
+    }
+    throw error;
+  }
 
   // Verify the target user exists.
   const targetUser = await prisma.user.findUnique({
@@ -141,19 +155,28 @@ export async function assignRoleAction(
   });
   if (!targetUser) throw new ResourceNotFoundError();
 
-  // Upsert the role assignment (idempotent on @@unique([userId, role, scopeId])).
-  const uniqueKey = scopeId
-    ? { userId, role: role as Role, scopeId }
-    : { userId, role: role as Role, scopeId: null as unknown as string };
+  if (scope.scopeType === 'DOCTOR') {
+    const doctor = await prisma.doctorProfile.findUnique({
+      where: { id: scope.scopeId },
+      select: { id: true },
+    });
+    if (!doctor) return { error: 'Selected doctor does not exist.' };
+  }
 
   await prisma.$transaction(async (tx) => {
     await tx.roleAssignment.upsert({
-      where: { userId_role_scopeId: uniqueKey },
+      where: {
+        userId_role_scopeId: {
+          userId,
+          role,
+          scopeId: scope.scopeId,
+        },
+      },
       create: {
         userId,
-        role: role as Role,
-        scopeType: scopeId ? 'DOCTOR' : 'GLOBAL',
-        scopeId: scopeId ?? null,
+        role,
+        scopeType: scope.scopeType,
+        scopeId: scope.scopeId,
         grantedBy: actor.userId,
       },
       update: {
@@ -168,7 +191,7 @@ export async function assignRoleAction(
       action: 'role.assigned',
       resourceType: 'User',
       resourceId: userId,
-      metadata: { role, scopeId: scopeId ?? null },
+      metadata: { role, scopeType: scope.scopeType, scopeId: scope.scopeId },
     });
   });
 

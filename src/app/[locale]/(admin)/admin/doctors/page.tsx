@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { getCurrentActor } from '@/lib/auth/session';
 import { hasPermission } from '@/lib/rbac/guard';
 import { prisma } from '@/lib/db';
@@ -78,12 +78,17 @@ export default async function AdminDoctorsPage({
                     {ar ? 'مسجّل منذ' : 'Inscrit le'}:{' '}
                     {doc.createdAt.toLocaleDateString(locale)}
                   </p>
+                  <p className={`mt-1 text-xs font-medium ${doc.licenseVerifiedAt ? 'text-green-700' : 'text-amber-700'}`}>
+                    {doc.licenseVerifiedAt
+                      ? (ar ? 'تم التحقق من الترخيص — جاهز للنشر' : 'Licence vérifiée — prêt à publier')
+                      : (ar ? 'التحقق من الترخيص مطلوب' : 'Vérification de licence requise')}
+                  </p>
                 </div>
                 {canVerify && (
                   <VerifyDoctorButton
                     doctorId={doc.id}
-                    doctorName={headline || doc.licenseNumber}
                     isPublished={doc.isPublished}
+                    licenseVerified={Boolean(doc.licenseVerifiedAt)}
                     canPublish={canPublish}
                     locale={locale}
                   />

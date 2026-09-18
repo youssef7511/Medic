@@ -23,6 +23,9 @@ export default async function AdminLayout({
     { href: '/admin/doctors', label: ar ? 'أطباء' : 'Médecins' },
     { href: '/admin/users', label: ar ? 'المستخدمون' : 'Utilisateurs' },
     { href: '/admin/audit', label: ar ? 'سجل التدقيق' : 'Journal d\'audit' },
+    ...(hasPermission(actor, 'platform_settings:read')
+      ? [{ href: '/admin/settings', label: ar ? 'إعدادات المنصة' : 'Paramètres' }]
+      : []),
     ...(hasPermission(actor, 'break_glass:activate')
       ? [{ href: '/admin/break-glass', label: 'Break-glass' }]
       : []),

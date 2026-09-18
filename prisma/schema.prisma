@@ -10,7 +10,8 @@
 //    follow-up migration (§3, §6), not by application checks.
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
@@ -137,6 +138,7 @@ model User {
   mfaEnrollmentTokens       MfaEnrollmentToken[] @relation("MfaEnrollmentSubject")
   issuedMfaEnrollmentTokens MfaEnrollmentToken[] @relation("MfaEnrollmentIssuer")
   breakGlassGrants          BreakGlassGrant[]    @relation("BreakGlassActor")
+  verifiedDoctorProfiles    DoctorProfile[]      @relation("DoctorLicenseVerifier")
 
   @@index([status])
 }
@@ -198,7 +200,9 @@ model RoleAssignment {
   userId    String
   role      Role
   scopeType ScopeType @default(GLOBAL)
-  scopeId   String? // doctorId when scopeType = DOCTOR
+  /// Stable non-null discriminator. GLOBAL is used for platform-wide roles;
+  /// otherwise this is the doctorProfile id when scopeType = DOCTOR.
+  scopeId   String    @default("GLOBAL")
   grantedBy String
   grantedAt DateTime  @default(now()) @db.Timestamptz(3)
   expiresAt DateTime? @db.Timestamptz(3)
@@ -215,31 +219,47 @@ model RoleAssignment {
 // ---------------------------------------------------------------------------
 
 model DoctorProfile {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  slug          String   @unique // /fr/doctors/dr-amine-benali
-  specialtyId   String
-  licenseNumber String // verified by a human super-admin before publish (§10)
-  bio           Json // { fr: "...", ar: "..." }
-  headline      Json
-  photoUrl      String?
-  languages     String[]
-  isPublished   Boolean  @default(false) // super-admin gates this
-  autoConfirm   Boolean  @default(false) // §13.2: vet bookings by default
-  timezone      String   @default("Africa/Tunis")
-  createdAt     DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt     DateTime @updatedAt @db.Timestamptz(3)
+  id                  String    @id @default(cuid())
+  userId              String    @unique
+  slug                String    @unique // /fr/doctors/dr-amine-benali
+  specialtyId         String
+  licenseNumber       String // verified by a human super-admin before publish (§10)
+  bio                 Json // { fr: "...", ar: "..." }
+  headline            Json
+  photoUrl            String?
+  languages           String[]
+  licenseVerifiedAt   DateTime? @db.Timestamptz(3)
+  licenseVerifiedById String?
+  isPublished         Boolean   @default(false) // super-admin gates this
+  autoConfirm         Boolean   @default(false) // §13.2: vet bookings by default
+  timezone            String    @default("Africa/Tunis")
+  createdAt           DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt           DateTime  @updatedAt @db.Timestamptz(3)
 
-  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  specialty       Specialty               @relation(fields: [specialtyId], references: [id])
-  clinics         Clinic[]
-  availability    AvailabilityRule[]
-  exceptions      AvailabilityException[]
-  links           PatientDoctorLink[]
-  sharedDocuments DocumentShare[]
+  user              User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  licenseVerifiedBy User?                   @relation("DoctorLicenseVerifier", fields: [licenseVerifiedById], references: [id], onDelete: SetNull)
+  specialty         Specialty               @relation(fields: [specialtyId], references: [id])
+  clinics           Clinic[]
+  availability      AvailabilityRule[]
+  exceptions        AvailabilityException[]
+  links             PatientDoctorLink[]
+  sharedDocuments   DocumentShare[]
 
   @@index([specialtyId])
   @@index([isPublished])
+  @@index([licenseVerifiedAt])
+}
+
+/// Singleton platform configuration managed from the Phase 6 admin space.
+/// Security-critical ceilings (MFA, break-glass duration, encryption) remain
+/// code-level invariants and cannot be weakened from this table.
+model PlatformSettings {
+  id                         String   @id @default("platform")
+  patientRegistrationEnabled Boolean  @default(true)
+  supportEmail               String?
+  supportPhone               String?
+  updatedByUserId            String?
+  updatedAt                  DateTime @updatedAt @db.Timestamptz(3)
 }
 
 model Specialty {

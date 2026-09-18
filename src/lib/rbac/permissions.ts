@@ -40,6 +40,8 @@ export const PERMISSIONS = [
   'role:assign',
   'user:suspend',
   'audit:read',
+  'platform_settings:read',
+  'platform_settings:write',
   'appointment:admin_override', // logged (§5)
   'break_glass:activate', // time-boxed emergency flow; never standing clinical access
 ] as const;
@@ -93,6 +95,7 @@ const MATRIX: Record<Role, readonly Permission[]> = {
 
   [Role.SUPPORT_ADMIN]: [
     'audit:read',
+    'platform_settings:read',
     'appointment:admin_override',
     // No clinical content. No role assignment. No suspend.
   ],
@@ -103,6 +106,8 @@ const MATRIX: Record<Role, readonly Permission[]> = {
     'role:assign',
     'user:suspend',
     'audit:read',
+    'platform_settings:read',
+    'platform_settings:write',
     'appointment:admin_override',
     'break_glass:activate',
     // Intentionally NO note:read / message:read:clinical. See §5.

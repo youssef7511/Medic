@@ -77,8 +77,8 @@ export default async function AdminAuditPage({
             className={`rounded-full px-3 py-1 text-xs font-medium ${
               filterAction === at.action
                 ? 'bg-brand-500 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
+            `}
           >
             {at.action} ({at._count.action})
           </Link>
