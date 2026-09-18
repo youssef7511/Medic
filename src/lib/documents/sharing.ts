@@ -228,10 +228,10 @@ export async function listSharedDocuments(
     metadata: { count: shares.length },
   });
 
-  return shares.map((s) => {
+  return Promise.all(shares.map(async (s) => {
     const doc = s.document;
     const meds = doc.prescription
-      ? (JSON.parse(decryptText(doc.prescription.medicationsEnc)) as MedicationLine[])
+      ? (JSON.parse(await decryptText(doc.prescription.medicationsEnc)) as MedicationLine[])
       : [];
 
     return {
@@ -248,7 +248,7 @@ export async function listSharedDocuments(
       sharedByPatientName: `${doc.link.patient.firstName} ${doc.link.patient.lastName}`,
       sharedAt: s.createdAt,
     };
-  });
+  }));
 }
 
 /**

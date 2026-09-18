@@ -1,124 +1,139 @@
 import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
+import { getKeyProvider } from './key-provider';
 
 /**
- * App-layer envelope encryption for clinical free text (§3.1, §10):
- * consultation notes, messages, reason-for-visit, allergies.
+ * Versioned envelope encryption for clinical free text (§3.1, §10).
  *
- * Envelope, not plain symmetric: every record gets its own random data key,
- * and only that data key is wrapped by the master key. So rotating the master
- * key rewraps keys instead of rewriting every ciphertext, and one leaked data
- * key exposes one record rather than the archive.
+ * v2 layout:
+ *   [0]       version
+ *   [1..3)    wrapped-key length (uint16 BE)
+ *   [3..15)   payload IV (12)
+ *   [15..31)  payload tag (16)
+ *   [31..N)   KMS/local wrapped data key
+ *   [N..]     ciphertext
  *
- * Layout (all lengths fixed, so parsing needs no framing):
- *   [0]      version
- *   [1..13)  wrap IV      (12)
- *   [13..29) wrap tag     (16)
- *   [29..61) wrapped key  (32)
- *   [61..73) payload IV   (12)
- *   [73..89) payload tag  (16)
- *   [89..]   ciphertext
- *
- * TODO(kms): `masterKey()` reads an env var — fine for local dev, NOT for
- * production. In production the master key belongs in a KMS and the wrap/unwrap
- * steps become KMS calls. Only these two functions change (§10).
+ * v1 blobs from earlier releases remain readable so KMS rollout does not
+ * require rewriting every clinical row in one dangerous migration. New writes
+ * always use v2 and a provider selected by KMS_PROVIDER.
  */
 
-const VERSION = 1;
+const VERSION_V1 = 1;
+const VERSION_V2 = 2;
 const ALGO = 'aes-256-gcm';
 const IV_LEN = 12;
 const TAG_LEN = 16;
 const KEY_LEN = 32;
+const V2_HEADER_LEN = 3;
+const V2_FIXED_LEN = V2_HEADER_LEN + IV_LEN + TAG_LEN;
 
-// Offsets derived from the lengths above rather than hardcoded, so the layout
-// comment and the parser can't drift apart.
-const OFF_WRAP_IV = 1;
-const OFF_WRAP_TAG = OFF_WRAP_IV + IV_LEN;
-const OFF_WRAPPED_KEY = OFF_WRAP_TAG + TAG_LEN;
-const OFF_IV = OFF_WRAPPED_KEY + KEY_LEN;
-const OFF_TAG = OFF_IV + IV_LEN;
-const OFF_CIPHERTEXT = OFF_TAG + TAG_LEN;
-
-function masterKey(): Buffer {
-  const raw = process.env.ENCRYPTION_MASTER_KEY;
-  if (!raw) {
-    throw new Error(
-      'ENCRYPTION_MASTER_KEY is not set — refusing to handle clinical data unencrypted.',
-    );
-  }
-  // Accept base64 or hex; require a full 256-bit key either way.
-  const key = Buffer.from(raw, raw.length === 64 ? 'hex' : 'base64');
-  if (key.length !== KEY_LEN) {
-    throw new Error(`ENCRYPTION_MASTER_KEY must decode to ${KEY_LEN} bytes, got ${key.length}.`);
-  }
-  return key;
-}
-
-// Returns Uint8Array rather than Buffer: Prisma's `Bytes` maps to
-// Uint8Array<ArrayBuffer>, and Node's Buffer<ArrayBufferLike> isn't assignable
-// to it. Copying into a fresh Uint8Array satisfies the type and detaches the
-// ciphertext from Node's shared internal pool.
-export function encryptText(plaintext: string): Uint8Array<ArrayBuffer> {
-  const master = masterKey();
-  const dataKey = randomBytes(KEY_LEN);
-
-  const wrapIv = randomBytes(IV_LEN);
-  const wrapCipher = createCipheriv(ALGO, master, wrapIv);
-  const wrappedKey = Buffer.concat([wrapCipher.update(dataKey), wrapCipher.final()]);
-  const wrapTag = wrapCipher.getAuthTag();
-
-  const iv = randomBytes(IV_LEN);
-  const cipher = createCipheriv(ALGO, dataKey, iv);
-  const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
-  const tag = cipher.getAuthTag();
-
-  dataKey.fill(0); // don't leave the plaintext key sitting in the heap
-
-  const combined = Buffer.concat([
-    Buffer.from([VERSION]),
-    wrapIv,
-    wrapTag,
-    wrappedKey,
-    iv,
-    tag,
-    ciphertext,
-  ]);
-
-  // Allocate a dedicated ArrayBuffer so the result is Uint8Array<ArrayBuffer>,
-  // which is what Prisma's `Bytes` expects. A Buffer's backing store is typed
-  // ArrayBufferLike (it may be SharedArrayBuffer) and won't assign.
-  const out = new Uint8Array(new ArrayBuffer(combined.length));
-  out.set(combined);
+function toPrismaBytes(value: Uint8Array): Uint8Array<ArrayBuffer> {
+  const out = new Uint8Array(new ArrayBuffer(value.length));
+  out.set(value);
   return out;
 }
 
-export function decryptText(blob: Buffer | Uint8Array): string {
-  const buf = Buffer.isBuffer(blob) ? blob : Buffer.from(blob);
-  if (buf.length < OFF_CIPHERTEXT) throw new Error('Ciphertext too short / corrupt.');
-  if (buf[0] !== VERSION) throw new Error(`Unsupported ciphertext version: ${buf[0]}`);
+export async function encryptText(plaintext: string): Promise<Uint8Array<ArrayBuffer>> {
+  const dataKey = randomBytes(KEY_LEN);
+  try {
+    const wrappedKey = Buffer.from(await getKeyProvider().wrapKey(dataKey));
+    if (wrappedKey.length > 0xffff) throw new Error('Wrapped data key is too large.');
 
-  const master = masterKey();
+    const header = Buffer.alloc(V2_HEADER_LEN);
+    header[0] = VERSION_V2;
+    header.writeUInt16BE(wrappedKey.length, 1);
 
-  const wrapIv = buf.subarray(OFF_WRAP_IV, OFF_WRAP_TAG);
-  const wrapTag = buf.subarray(OFF_WRAP_TAG, OFF_WRAPPED_KEY);
-  const wrappedKey = buf.subarray(OFF_WRAPPED_KEY, OFF_IV);
-  const iv = buf.subarray(OFF_IV, OFF_TAG);
-  const tag = buf.subarray(OFF_TAG, OFF_CIPHERTEXT);
-  const ciphertext = buf.subarray(OFF_CIPHERTEXT);
+    const iv = randomBytes(IV_LEN);
+    const cipher = createCipheriv(ALGO, dataKey, iv);
+    cipher.setAAD(Buffer.concat([header, wrappedKey]));
+    const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
 
-  const unwrap = createDecipheriv(ALGO, master, wrapIv);
-  unwrap.setAuthTag(wrapTag);
-  const dataKey = Buffer.concat([unwrap.update(wrappedKey), unwrap.final()]);
-
-  const decipher = createDecipheriv(ALGO, dataKey, iv);
-  decipher.setAuthTag(tag);
-  const plaintext = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
-
-  dataKey.fill(0);
-  return plaintext;
+    return toPrismaBytes(
+      Buffer.concat([header, iv, cipher.getAuthTag(), wrappedKey, ciphertext]),
+    );
+  } finally {
+    dataKey.fill(0);
+  }
 }
 
-/** Convenience for optional fields. */
-export function encryptOptional(value: string | null | undefined): Uint8Array<ArrayBuffer> | null {
+export async function decryptText(blob: Buffer | Uint8Array): Promise<string> {
+  const buf = Buffer.isBuffer(blob) ? blob : Buffer.from(blob);
+  if (buf.length < 1) throw new Error('Ciphertext too short / corrupt.');
+  if (buf[0] === VERSION_V1) return decryptLegacyV1(buf);
+  if (buf[0] !== VERSION_V2) throw new Error(`Unsupported ciphertext version: ${buf[0]}`);
+  if (buf.length < V2_FIXED_LEN) throw new Error('Ciphertext too short / corrupt.');
+
+  const wrappedLength = buf.readUInt16BE(1);
+  const wrappedStart = V2_FIXED_LEN;
+  const ciphertextStart = wrappedStart + wrappedLength;
+  if (wrappedLength === 0 || buf.length < ciphertextStart) {
+    throw new Error('Ciphertext contains an invalid wrapped-key length.');
+  }
+
+  const header = buf.subarray(0, V2_HEADER_LEN);
+  const iv = buf.subarray(V2_HEADER_LEN, V2_HEADER_LEN + IV_LEN);
+  const tag = buf.subarray(V2_HEADER_LEN + IV_LEN, V2_FIXED_LEN);
+  const wrappedKey = buf.subarray(wrappedStart, ciphertextStart);
+  const ciphertext = buf.subarray(ciphertextStart);
+  const dataKey = Buffer.from(await getKeyProvider().unwrapKey(wrappedKey));
+
+  if (dataKey.length !== KEY_LEN) {
+    dataKey.fill(0);
+    throw new Error('Unwrapped data key has an invalid length.');
+  }
+
+  try {
+    const decipher = createDecipheriv(ALGO, dataKey, iv);
+    decipher.setAAD(Buffer.concat([header, wrappedKey]));
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+  } finally {
+    dataKey.fill(0);
+  }
+}
+
+export async function encryptOptional(
+  value: string | null | undefined,
+): Promise<Uint8Array<ArrayBuffer> | null> {
   const trimmed = value?.trim();
   return trimmed ? encryptText(trimmed) : null;
+}
+
+// Legacy v1 support. This path is intentionally local-key-only and disappears
+// after a controlled rewrap job has migrated all v1 rows.
+function legacyMasterKey(): Buffer {
+  const raw = process.env.ENCRYPTION_MASTER_KEY;
+  if (!raw) {
+    throw new Error('ENCRYPTION_MASTER_KEY is required to read legacy v1 ciphertext.');
+  }
+  const key = Buffer.from(raw, raw.length === 64 ? 'hex' : 'base64');
+  if (key.length !== KEY_LEN) throw new Error('Invalid legacy ENCRYPTION_MASTER_KEY.');
+  return key;
+}
+
+function decryptLegacyV1(buf: Buffer): string {
+  const offWrapIv = 1;
+  const offWrapTag = offWrapIv + IV_LEN;
+  const offWrappedKey = offWrapTag + TAG_LEN;
+  const offIv = offWrappedKey + KEY_LEN;
+  const offTag = offIv + IV_LEN;
+  const offCiphertext = offTag + TAG_LEN;
+  if (buf.length < offCiphertext) throw new Error('Ciphertext too short / corrupt.');
+
+  const unwrap = createDecipheriv(ALGO, legacyMasterKey(), buf.subarray(offWrapIv, offWrapTag));
+  unwrap.setAuthTag(buf.subarray(offWrapTag, offWrappedKey));
+  const dataKey = Buffer.concat([
+    unwrap.update(buf.subarray(offWrappedKey, offIv)),
+    unwrap.final(),
+  ]);
+
+  try {
+    const decipher = createDecipheriv(ALGO, dataKey, buf.subarray(offIv, offTag));
+    decipher.setAuthTag(buf.subarray(offTag, offCiphertext));
+    return Buffer.concat([
+      decipher.update(buf.subarray(offCiphertext)),
+      decipher.final(),
+    ]).toString('utf8');
+  } finally {
+    dataKey.fill(0);
+  }
 }

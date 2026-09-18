@@ -41,23 +41,36 @@ async function requestContext(): Promise<{ ip?: string; userAgent?: string }> {
  */
 export async function audit(db: Db, entry: AuditEntry): Promise<void> {
   try {
-    const ctx = await requestContext();
-    await db.auditLog.create({
-      data: {
-        actorUserId: entry.actorUserId ?? null,
-        actorRole: entry.actorRole,
-        action: entry.action,
-        resourceType: entry.resourceType,
-        resourceId: entry.resourceId,
-        patientId: entry.patientId ?? null,
-        ip: ctx.ip ?? null,
-        userAgent: ctx.userAgent ?? null,
-        ...(entry.metadata === undefined ? {} : { metadata: entry.metadata }),
-      },
-    });
+    await writeAudit(db, entry);
   } catch (err) {
     console.error('[audit] FAILED to write audit entry', entry.action, err);
   }
+}
+
+async function writeAudit(db: Db, entry: AuditEntry): Promise<void> {
+  const ctx = await requestContext();
+  await db.auditLog.create({
+    data: {
+      actorUserId: entry.actorUserId ?? null,
+      actorRole: entry.actorRole,
+      action: entry.action,
+      resourceType: entry.resourceType,
+      resourceId: entry.resourceId,
+      patientId: entry.patientId ?? null,
+      ip: ctx.ip ?? null,
+      userAgent: ctx.userAgent ?? null,
+      ...(entry.metadata === undefined ? {} : { metadata: entry.metadata }),
+    },
+  });
+}
+
+/**
+ * Security-critical audit. Unlike the best-effort general audit helper, this
+ * throws so the enclosing transaction/read fails closed if the event cannot be
+ * recorded. Break-glass must never become "access now, maybe audit later".
+ */
+export function auditCritical(db: Db, entry: AuditEntry): Promise<void> {
+  return writeAudit(db, entry);
 }
 
 /** Convenience wrapper for the non-transactional case. */

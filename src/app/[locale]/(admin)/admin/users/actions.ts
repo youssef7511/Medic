@@ -7,8 +7,19 @@ import { getCurrentActor } from '@/lib/auth/session';
 import { hasPermission, ResourceNotFoundError } from '@/lib/rbac/guard';
 import { prisma } from '@/lib/db';
 import { audit } from '@/lib/audit';
+import { rolesRequireMfa } from '@/lib/auth/totp';
+import {
+  generateMfaEnrollmentToken,
+  hashMfaEnrollmentToken,
+  mfaEnrollmentExpiry,
+} from '@/lib/auth/mfa-enrollment';
 
-export type UserActionState = { error?: string; ok?: boolean };
+export type UserActionState = {
+  error?: string;
+  ok?: boolean;
+  enrollmentToken?: string;
+  enrollmentExpiresAt?: string;
+};
 
 /**
  * Suspend a user (§5). Only SUPER_ADMIN can do this.
@@ -38,6 +49,12 @@ export async function suspendUserAction(
     await tx.user.update({
       where: { id: userId },
       data: { status: 'SUSPENDED' },
+    });
+
+    // Suspension must take effect on the next request, not when a JWT expires.
+    await tx.session.updateMany({
+      where: { userId, revokedAt: null },
+      data: { revokedAt: new Date() },
     });
 
     await audit(tx, {
@@ -157,4 +174,69 @@ export async function assignRoleAction(
 
   revalidatePath('/admin/users');
   return { ok: true };
+}
+
+/**
+ * Creates the out-of-band proof needed for first-time privileged MFA setup.
+ * The raw 256-bit token is returned once; only its digest is persisted.
+ */
+export async function issueMfaEnrollmentTokenAction(
+  _prev: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  const actor = await getCurrentActor();
+  if (!actor) return { error: 'Please sign in again.' };
+  if (!hasPermission(actor, 'role:assign')) return { error: 'Permission denied.' };
+
+  const userId = String(formData.get('userId') ?? '');
+  if (!userId) return { error: 'Missing userId.' };
+
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    include: { roleAssignments: true },
+  });
+  if (!target) throw new ResourceNotFoundError();
+  if (!rolesRequireMfa(target.roleAssignments)) {
+    return { error: 'Assign a privileged role before issuing an MFA token.' };
+  }
+  if (target.mfaSecret) return { error: 'MFA is already enrolled for this user.' };
+  if (target.status !== 'ACTIVE') return { error: 'The user account is not active.' };
+
+  const rawToken = generateMfaEnrollmentToken();
+  const expiresAt = mfaEnrollmentExpiry();
+  const now = new Date();
+
+  await prisma.$transaction(async (tx) => {
+    await tx.mfaEnrollmentToken.updateMany({
+      where: { userId, usedAt: null, revokedAt: null },
+      data: { revokedAt: now },
+    });
+    await tx.user.update({
+      where: { id: userId },
+      data: { mfaPendingSecret: null },
+    });
+    const token = await tx.mfaEnrollmentToken.create({
+      data: {
+        userId,
+        tokenHash: hashMfaEnrollmentToken(rawToken),
+        createdByUserId: actor.userId,
+        expiresAt,
+      },
+    });
+    await audit(tx, {
+      actorUserId: actor.userId,
+      actorRole: Role.SUPER_ADMIN,
+      action: 'user.mfa_enrollment_token_issued',
+      resourceType: 'User',
+      resourceId: userId,
+      metadata: { tokenId: token.id, expiresAt: expiresAt.toISOString() },
+    });
+  });
+
+  revalidatePath('/admin/users');
+  return {
+    ok: true,
+    enrollmentToken: rawToken,
+    enrollmentExpiresAt: expiresAt.toISOString(),
+  };
 }

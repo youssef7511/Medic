@@ -86,7 +86,7 @@ async function seed() {
         dateOfBirth: new Date('1990-01-01'),
         sex: Sex.UNSPECIFIED,
         phone: `+2169${String(stamp).slice(-6)}${tag === 'a' ? 1 : 2}`,
-        ...(allergy ? { allergiesEnc: encryptText(allergy) } : {}),
+        ...(allergy ? { allergiesEnc: await encryptText(allergy) } : {}),
       },
     });
     await prisma.roleAssignment.create({
@@ -175,7 +175,7 @@ async function main() {
     check('medications stored encrypted (no plaintext drug)', !rawMeds.includes('Amoxicilline'));
 
     // Allergy snapshot.
-    const snap = JSON.parse(decryptText(row.prescription!.allergySnapshotEnc));
+    const snap = JSON.parse(await decryptText(row.prescription!.allergySnapshotEnc));
     check('allergy snapshot captured what the doctor saw', snap.kind === 'listed' && snap.text === 'Pénicilline',
       JSON.stringify(snap));
 

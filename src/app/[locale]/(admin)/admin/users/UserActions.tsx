@@ -9,7 +9,13 @@ import {
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { suspendUserAction, reactivateUserAction, assignRoleAction, type UserActionState } from './actions';
+import {
+  suspendUserAction,
+  reactivateUserAction,
+  assignRoleAction,
+  issueMfaEnrollmentTokenAction,
+  type UserActionState,
+} from './actions';
 
 /**
  * User action controls (§6). Shows suspend/reactivate + role assignment.
@@ -19,11 +25,13 @@ export function UserActions({
   userId,
   userName,
   currentStatus,
+  mfaEnrolled,
   locale,
 }: {
   userId: string;
   userName: string;
   currentStatus: string;
+  mfaEnrolled: boolean;
   locale: string;
 }) {
   const ar = locale === 'ar';
@@ -40,6 +48,10 @@ export function UserActions({
   );
   const [roleState, roleFormAction, rolePending] = useActionState<UserActionState, FormData>(
     assignRoleAction,
+    {},
+  );
+  const [mfaState, mfaAction, mfaPending] = useActionState<UserActionState, FormData>(
+    issueMfaEnrollmentTokenAction,
     {},
   );
 
@@ -65,6 +77,12 @@ export function UserActions({
     setSelectedRole('');
   }
 
+  function handleIssueMfaToken() {
+    const fd = new FormData();
+    fd.set('userId', userId);
+    mfaAction(fd);
+  }
+
   return (
     <div className="flex items-center gap-2">
       {currentStatus === 'ACTIVE' ? (
@@ -81,13 +99,31 @@ export function UserActions({
         {ar ? 'دور' : 'Rôle'}
       </Button>
 
-      {(suspendState.error || reactivateState.error || roleState.error) && (
+      {!mfaEnrolled && (
+        <Button type="button" size="sm" variant="outline" onClick={handleIssueMfaToken} disabled={mfaPending}>
+          {ar ? 'رمز MFA' : 'Jeton MFA'}
+        </Button>
+      )}
+
+      {(suspendState.error || reactivateState.error || roleState.error || mfaState.error) && (
         <p role="alert" className="text-xs text-red-600">
-          {suspendState.error || reactivateState.error || roleState.error}
+          {suspendState.error || reactivateState.error || roleState.error || mfaState.error}
         </p>
       )}
       {(suspendState.ok || reactivateState.ok || roleState.ok) && (
         <p className="text-xs text-green-600">{ar ? 'تم' : 'Fait'}</p>
+      )}
+
+      {mfaState.enrollmentToken && (
+        <div className="max-w-sm rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
+          <p className="font-semibold">
+            {ar ? 'انسخ الرمز الآن — سيظهر مرة واحدة فقط.' : 'Copiez maintenant — ce jeton ne sera affiché qu’une fois.'}
+          </p>
+          <code className="mt-1 block break-all select-all">{mfaState.enrollmentToken}</code>
+          <p className="mt-1 text-amber-700">
+            {ar ? 'تنتهي الصلاحية خلال 30 دقيقة.' : 'Expiration dans 30 minutes.'}
+          </p>
+        </div>
       )}
 
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>

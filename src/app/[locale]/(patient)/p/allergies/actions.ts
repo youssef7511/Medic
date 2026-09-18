@@ -51,7 +51,7 @@ export async function saveAllergiesAction(
     where: { id: profile.id },
     data: {
       // Affirming "none" wins and clears text; otherwise store the encrypted text.
-      allergiesEnc: affirmedNone || text.length === 0 ? null : encryptText(text),
+      allergiesEnc: affirmedNone || text.length === 0 ? null : await encryptText(text),
       allergiesAffirmedNone: affirmedNone,
       allergiesUpdatedAt: new Date(),
     },

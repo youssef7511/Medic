@@ -2,6 +2,7 @@ import { notFound, redirect } from 'next/navigation';
 import { getCurrentActor } from '@/lib/auth/session';
 import { hasPermission } from '@/lib/rbac/guard';
 import { prisma } from '@/lib/db';
+import { Link } from '@/i18n/navigation';
 
 export const dynamic = 'force-dynamic';
 
@@ -61,16 +62,16 @@ export default async function AdminAuditPage({
 
       {/* Action filter */}
       <div className="mb-4 flex flex-wrap gap-2">
-        <a
+        <Link
           href="/admin/audit"
           className={`rounded-full px-3 py-1 text-xs font-medium ${
             !filterAction ? 'bg-brand-500 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
           }`}
         >
           {ar ? 'الكل' : 'Tous'}
-        </a>
+        </Link>
         {actionTypes.map((at) => (
-          <a
+          <Link
             key={at.action}
             href={`/admin/audit?action=${encodeURIComponent(at.action)}`}
             className={`rounded-full px-3 py-1 text-xs font-medium ${
@@ -80,7 +81,7 @@ export default async function AdminAuditPage({
             }`}
           >
             {at.action} ({at._count.action})
-          </a>
+          </Link>
         ))}
       </div>
 
@@ -91,7 +92,7 @@ export default async function AdminAuditPage({
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
-          <table className="w-full text-left text-xs">
+          <table className="w-full text-start text-xs">
             <thead>
               <tr className="border-b border-gray-200 text-gray-500">
                 <th className="px-3 py-2 font-medium">{ar ? 'التاريخ' : 'Date'}</th>

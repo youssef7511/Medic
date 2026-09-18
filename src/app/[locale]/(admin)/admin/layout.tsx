@@ -2,6 +2,7 @@ import { getTranslations } from 'next-intl/server';
 import { Role } from '@prisma/client';
 import { requireRole } from '@/lib/auth/guards';
 import { SpaceShell } from '@/components/SpaceShell';
+import { hasPermission } from '@/lib/rbac/guard';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +14,7 @@ export default async function AdminLayout({
   params: Promise<{ locale: string }>;
 }) {
   const { locale } = await params;
-  await requireRole(locale, [Role.SUPER_ADMIN, Role.SUPPORT_ADMIN], `/${locale}/admin`);
+  const actor = await requireRole(locale, [Role.SUPER_ADMIN, Role.SUPPORT_ADMIN], `/${locale}/admin`);
   const t = await getTranslations();
   const ar = locale === 'ar';
 
@@ -22,6 +23,9 @@ export default async function AdminLayout({
     { href: '/admin/doctors', label: ar ? 'أطباء' : 'Médecins' },
     { href: '/admin/users', label: ar ? 'المستخدمون' : 'Utilisateurs' },
     { href: '/admin/audit', label: ar ? 'سجل التدقيق' : 'Journal d\'audit' },
+    ...(hasPermission(actor, 'break_glass:activate')
+      ? [{ href: '/admin/break-glass', label: 'Break-glass' }]
+      : []),
   ];
 
   return (

@@ -40,3 +40,10 @@ test('only SUPER_ADMIN can verify licenses and publish doctors (§10)', () => {
   assert.equal(roleGrants(Role.DOCTOR, 'doctor:publish'), false);
   assert.equal(roleGrants(Role.SUPPORT_ADMIN, 'doctor:publish'), false);
 });
+
+test('only SUPER_ADMIN can activate break-glass without gaining standing clinical permissions', () => {
+  assert.equal(roleGrants(Role.SUPER_ADMIN, 'break_glass:activate'), true);
+  assert.equal(roleGrants(Role.SUPPORT_ADMIN, 'break_glass:activate'), false);
+  assert.equal(roleGrants(Role.DOCTOR, 'break_glass:activate'), false);
+  assert.equal(roleGrants(Role.SUPER_ADMIN, 'note:read'), false);
+});
