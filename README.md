@@ -145,6 +145,31 @@ npm run db:seed                 # fictional specialties only
 npm run dev                     # http://localhost:3000 → /fr
 ```
 
+### Docker
+
+Docker reads runtime secrets from `.env.docker`. The example intentionally
+contains no passwords or cryptographic keys:
+
+```bash
+cp .env.docker.example .env.docker
+# Fill the database, auth, storage and provider values you use.
+# DATABASE_URL must use host `pg`, not localhost:
+# postgresql://USER:PASSWORD@pg:5432/DATABASE?schema=public
+# Generate AUTH_SECRET and ENCRYPTION_MASTER_KEY separately:
+openssl rand -base64 32
+docker compose --env-file .env.docker config
+docker compose --env-file .env.docker up -d --build
+```
+
+Compose now rejects an empty `DATABASE_URL`, `AUTH_SECRET`, or
+`ENCRYPTION_MASTER_KEY` before the application starts. Its one-shot `migrate`
+service applies pending Prisma migrations after PostgreSQL becomes healthy and
+before the application starts. Never put production secrets in the repository
+or bake them into the image. Production clinical encryption additionally needs
+`KMS_PROVIDER=aws`, `KMS_KEY_ID` and `AWS_REGION`; real SMS delivery needs the
+Twilio or HTTP-provider variables documented in
+`docs/phase7-security-runbook.md`.
+
 ## Scripts
 
 | Script | Does |
