@@ -33,22 +33,22 @@ export default async function PatientThreadDetailPage({
   }
 
   return (
-    <section className="flex h-[calc(100vh-4rem)] flex-col">
+    <section className="medic-panel flex h-[calc(100vh-11rem)] min-h-[560px] flex-col">
       {/* Header */}
-      <div className="border-b border-gray-200 bg-white px-4 py-3">
+      <div className="border-b border-slate-100 bg-white px-5 py-4">
         <Link
           href={`/p/doctors/${doctorId}/messages`}
-          className="text-xs text-brand-600 hover:underline"
+          className="text-xs font-semibold text-brand-700 hover:underline"
         >
           {ar ? 'الرسائل' : 'Messages'}
         </Link>
-        <h1 className="mt-1 text-lg font-bold">
+        <h1 className="mt-1 text-lg font-bold text-navy-950">
           {thread.subject ?? (ar ? 'محادثة' : 'Conversation')}
         </h1>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4">
+      <div className="flex-1 overflow-y-auto bg-slate-50/70 px-4 py-5 sm:px-6">
         {messages.length === 0 && (
           <p className="text-center text-sm text-gray-500">
             {ar
@@ -64,10 +64,10 @@ export default async function PatientThreadDetailPage({
               className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-xs rounded-lg px-4 py-2 text-sm ${
+                className={`max-w-[82%] rounded-2xl px-4 py-2.5 text-sm shadow-sm sm:max-w-md ${
                   msg.isOwn
-                    ? 'bg-brand-500 text-white'
-                    : 'bg-gray-100 text-gray-900'
+                    ? 'rounded-ee-sm bg-brand-600 text-white'
+                    : 'rounded-es-sm border border-slate-200 bg-white text-slate-900'
                 }`}
               >
                 <p dir="auto" className="whitespace-pre-wrap">
@@ -75,7 +75,7 @@ export default async function PatientThreadDetailPage({
                 </p>
                 <p
                   className={`mt-1 text-xs ${
-                    msg.isOwn ? 'text-brand-100' : 'text-gray-400'
+                    msg.isOwn ? 'text-brand-100' : 'text-slate-400'
                   }`}
                 >
                   {msg.createdAt.toLocaleTimeString(locale, {

@@ -31,12 +31,12 @@ export function LoginForm({ next }: { next?: string }) {
   }, [needsTotp]);
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-5">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="next" value={next ?? ''} />
 
       <div>
-        <label htmlFor="email" className="block text-sm font-medium">
+        <label htmlFor="email" className="block text-sm font-semibold text-navy-950">
           Email
         </label>
         <input
@@ -48,12 +48,13 @@ export function LoginForm({ next }: { next?: string }) {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           readOnly={needsTotp}
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2 read-only:bg-gray-50 read-only:text-gray-500"
+          placeholder="nom@exemple.com"
+          className="mt-2 h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm read-only:bg-slate-50 read-only:text-slate-500"
         />
       </div>
 
       <div>
-        <label htmlFor="password" className="block text-sm font-medium">
+        <label htmlFor="password" className="block text-sm font-semibold text-navy-950">
           {locale === 'ar' ? 'كلمة المرور' : 'Mot de passe'}
         </label>
         <input
@@ -65,13 +66,13 @@ export function LoginForm({ next }: { next?: string }) {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           readOnly={needsTotp}
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2 read-only:bg-gray-50 read-only:text-gray-500"
+          className="mt-2 h-12 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm read-only:bg-slate-50 read-only:text-slate-500"
         />
       </div>
 
       {needsTotp && (
         <div>
-          <label htmlFor="totp" className="block text-sm font-medium">
+          <label htmlFor="totp" className="block text-sm font-semibold text-navy-950">
             {locale === 'ar' ? 'رمز التحقق' : 'Code de vérification'}
           </label>
           <input
@@ -82,7 +83,8 @@ export function LoginForm({ next }: { next?: string }) {
             inputMode="numeric"
             autoComplete="one-time-code"
             required
-            className="mt-1 w-full rounded border border-gray-300 px-3 py-2 tracking-widest"
+            maxLength={6}
+            className="mt-2 h-12 w-full rounded-xl border border-slate-300 px-3 text-center text-lg font-semibold tracking-[0.35em]"
           />
           <p className="mt-1 text-xs text-gray-500">
             {locale === 'ar'
@@ -123,7 +125,7 @@ export function LoginForm({ next }: { next?: string }) {
       <button
         type="submit"
         disabled={pending}
-        className="w-full rounded bg-brand-500 px-4 py-2 font-medium text-white hover:bg-brand-600 disabled:opacity-60"
+        className="h-12 w-full rounded-xl bg-brand-600 px-4 font-semibold text-white shadow-lg shadow-brand-600/15 hover:bg-brand-700 disabled:opacity-60"
       >
         {pending ? t('common.loading') : t('common.login')}
       </button>

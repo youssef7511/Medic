@@ -6,6 +6,7 @@ import { listDocuments } from '@/lib/documents/prescriptions';
 import { DocumentList, type DocumentRow } from '@/components/DocumentList';
 import { ShareDocumentButton } from './ShareDocumentButton';
 import { getDocumentShares } from '@/lib/documents/sharing';
+import { ShieldCheck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -67,8 +68,9 @@ export default async function PatientDocumentsPage({
 
   return (
     <section>
-      <h1 className="mb-6 text-2xl font-bold">{ar ? 'مستنداتي' : 'Mes documents'}</h1>
-      <DocumentList
+      <div><p className="medic-kicker">{ar ? 'الملف الطبي' : 'Dossier médical'}</p><h1 className="medic-page-title mt-2">{ar ? 'مستنداتي' : 'Mes documents'}</h1><p className="mt-2 text-sm text-slate-500">{ar ? 'اعرض وصفاتك وشاركها بشكل آمن.' : 'Consultez vos documents et partagez-les de manière sécurisée.'}</p></div>
+      <div className="mt-6 flex items-start gap-3 rounded-2xl border border-brand-200 bg-brand-50 p-4"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-brand-700" /><div><p className="text-sm font-semibold text-navy-950">{ar ? 'المشاركة تحت سيطرتك' : 'Vous gardez le contrôle du partage'}</p><p className="mt-1 text-xs leading-5 text-slate-600">{ar ? 'يتم تثبيت المشاركة على نسخة محددة ويمكنك إلغاؤها.' : 'Le partage porte sur une version précise et peut être révoqué.'}</p></div></div>
+      <div className="mt-5"><DocumentList
         documents={rows}
         locale={locale}
         actions={(doc) =>
@@ -82,7 +84,7 @@ export default async function PatientDocumentsPage({
             />
           ) : null
         }
-      />
+      /></div>
     </section>
   );
 }

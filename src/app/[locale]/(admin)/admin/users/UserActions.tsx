@@ -90,7 +90,7 @@ export function UserActions({
   }
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       {currentStatus === 'ACTIVE' ? (
         <Button type="button" size="sm" variant="destructive" onClick={handleSuspend} disabled={suspendPending}>
           {ar ? 'تعليق' : 'Suspendre'}
@@ -121,7 +121,7 @@ export function UserActions({
       )}
 
       {mfaState.enrollmentToken && (
-        <div className="max-w-sm rounded border border-amber-300 bg-amber-50 p-2 text-xs text-amber-900">
+        <div className="max-w-sm rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
           <p className="font-semibold">
             {ar ? 'انسخ الرمز الآن — سيظهر مرة واحدة فقط.' : 'Copiez maintenant — ce jeton ne sera affiché qu’une fois.'}
           </p>
@@ -146,7 +146,7 @@ export function UserActions({
               setSelectedRole(e.target.value);
               if (e.target.value !== 'DOCTOR_STAFF') setSelectedDoctorId('');
             }}
-            className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+            className="medic-input"
           >
             <option value="">{ar ? 'اختر دورًا…' : 'Sélectionner un rôle…'}</option>
             <option value="DOCTOR">DOCTOR</option>
@@ -164,7 +164,7 @@ export function UserActions({
                 id={`doctor-scope-${userId}`}
                 value={selectedDoctorId}
                 onChange={(event) => setSelectedDoctorId(event.target.value)}
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm"
+                className="medic-input"
               >
                 <option value="">{ar ? 'اختر طبيبًا…' : 'Sélectionner un médecin…'}</option>
                 {doctorOptions.map((doctor) => (

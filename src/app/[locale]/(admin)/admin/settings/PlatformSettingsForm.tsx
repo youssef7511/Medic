@@ -26,20 +26,20 @@ export function PlatformSettingsForm({
   const [state, action, pending] = useActionState(updatePlatformSettingsAction, initialState);
 
   return (
-    <form action={action} className="space-y-5 rounded-lg border border-gray-200 bg-white p-5">
-      <label className="flex items-start gap-3">
+    <form action={action} className="medic-panel space-y-6 p-5 sm:p-6">
+      <label className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4">
         <input
           type="checkbox"
           name="patientRegistrationEnabled"
           defaultChecked={settings.patientRegistrationEnabled}
           disabled={!canWrite}
-          className="mt-1"
+          className="mt-1 h-4 w-4 accent-brand-600"
         />
         <span>
-          <span className="block text-sm font-medium">
+          <span className="block text-sm font-semibold text-navy-950">
             {ar ? 'السماح بتسجيل المرضى' : 'Autoriser l’inscription des patients'}
           </span>
-          <span className="block text-xs text-gray-500">
+          <span className="mt-1 block text-xs leading-5 text-slate-500">
             {ar
               ? 'عند التعطيل، ترفض الخادم طلبات إنشاء حسابات المرضى.'
               : 'Si désactivé, le serveur refuse toute création de compte patient.'}
@@ -48,19 +48,19 @@ export function PlatformSettingsForm({
       </label>
 
       <div>
-        <label htmlFor="supportEmail" className="block text-sm font-medium">Email support</label>
+        <label htmlFor="supportEmail" className="medic-label">Email support</label>
         <input
           id="supportEmail"
           name="supportEmail"
           type="email"
           defaultValue={settings.supportEmail ?? ''}
           disabled={!canWrite}
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2 disabled:bg-gray-50"
+          className="medic-input"
         />
       </div>
 
       <div>
-        <label htmlFor="supportPhone" className="block text-sm font-medium">
+        <label htmlFor="supportPhone" className="medic-label">
           {ar ? 'هاتف الدعم' : 'Téléphone support'}
         </label>
         <input
@@ -69,7 +69,7 @@ export function PlatformSettingsForm({
           type="tel"
           defaultValue={settings.supportPhone ?? ''}
           disabled={!canWrite}
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2 disabled:bg-gray-50"
+          className="medic-input"
         />
       </div>
 

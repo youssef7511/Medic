@@ -12,7 +12,7 @@ export function SignOutButton({ compact = false }: { compact?: boolean }) {
     <form action={signOutAction}>
       <button
         type="submit"
-        className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-red-600"
+        className="flex items-center gap-1.5 rounded-lg p-2 text-sm text-slate-500 hover:bg-red-50 hover:text-red-600"
         aria-label={label}
       >
         <LogOut className="h-4 w-4" />

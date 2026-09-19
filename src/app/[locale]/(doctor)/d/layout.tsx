@@ -20,11 +20,11 @@ export default async function DoctorLayout({
   const ar = locale === 'ar';
 
   const nav = [
-    { href: '/d', label: ar ? 'المواعيد' : 'Rendez-vous' },
-    { href: '/d/calendar', label: ar ? 'التقويم' : 'Agenda' },
-    { href: '/d/availability', label: ar ? 'ساعات العمل' : 'Disponibilités' },
-    { href: '/d/threads', label: ar ? 'المحادثات' : 'Conversations' },
-    { href: '/d/shared-documents', label: ar ? 'مستندات مشتركة' : 'Documents partagés' },
+    { href: '/d', label: ar ? 'لوحة التحكم' : 'Tableau de bord', icon: 'dashboard' as const },
+    { href: '/d/calendar', label: ar ? 'التقويم' : 'Agenda', icon: 'calendar' as const },
+    { href: '/d/availability', label: ar ? 'ساعات العمل' : 'Disponibilités', icon: 'availability' as const },
+    { href: '/d/threads', label: ar ? 'المحادثات' : 'Conversations', icon: 'messages' as const },
+    { href: '/d/shared-documents', label: ar ? 'مستندات مشتركة' : 'Documents partagés', icon: 'documents' as const },
   ];
 
   return (

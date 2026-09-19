@@ -59,7 +59,7 @@ export function AvailabilityEditor({
 
   if (clinics.length === 0) {
     return (
-      <p className="rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+      <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
         {ar
           ? 'أضف عيادة أولًا قبل تحديد ساعات العمل.'
           : "Ajoutez d'abord un cabinet avant de définir vos horaires."}
@@ -71,10 +71,10 @@ export function AvailabilityEditor({
     <div className="space-y-10">
       {/* ------------------------------------------------ weekly recurring hours */}
       <section>
-        <h2 className="text-lg font-semibold">
+        <h2 className="text-lg font-bold text-navy-950">
           {ar ? 'ساعات العمل الأسبوعية' : 'Horaires hebdomadaires'}
         </h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <p className="mt-1 text-sm text-slate-500">
           {ar
             ? 'تتكرر كل أسبوع. تُحسب المواعيد من هذه الفترات.'
             : 'Répétés chaque semaine. Les créneaux en sont dérivés.'}
@@ -84,11 +84,11 @@ export function AvailabilityEditor({
           {DISPLAY_ORDER.map((weekday) => {
             const dayRules = rules.filter((r) => r.weekday === weekday);
             return (
-              <div key={weekday} className="rounded-lg border border-gray-200 bg-white p-4">
-                <h3 className="text-sm font-medium text-gray-900">{days[weekday]}</h3>
+              <div key={weekday} className="medic-panel p-4 sm:p-5">
+                <h3 className="text-sm font-bold text-navy-950">{days[weekday]}</h3>
 
                 {dayRules.length === 0 ? (
-                  <p className="mt-2 text-sm text-gray-400">
+                  <p className="mt-2 text-sm text-slate-400">
                     {ar ? 'مغلق' : 'Fermé'}
                   </p>
                 ) : (
@@ -96,11 +96,11 @@ export function AvailabilityEditor({
                     {dayRules.map((rule) => (
                       <li
                         key={rule.id}
-                        className="flex items-center justify-between rounded bg-gray-50 px-3 py-2 text-sm"
+                        className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm"
                       >
                         <span className="tabular-nums">
                           {rule.startLocal} – {rule.endLocal}
-                          <span className="ms-3 text-gray-500">
+                          <span className="ms-3 text-slate-500">
                             {rule.slotMinutes} min · {rule.clinicName}
                           </span>
                         </span>
@@ -124,32 +124,32 @@ export function AvailabilityEditor({
                   <input type="hidden" name="locale" value={locale} />
                   <input type="hidden" name="weekday" value={weekday} />
 
-                  <label className="text-xs text-gray-600">
+                  <label className="text-xs font-medium text-slate-600">
                     {ar ? 'من' : 'De'}
                     <input
                       name="startLocal"
                       type="time"
                       required
                       defaultValue="09:00"
-                      className="mt-1 block rounded border border-gray-300 px-2 py-1 text-sm"
+                      className="mt-1 block h-9 rounded-lg border border-slate-300 px-2 text-sm"
                     />
                   </label>
-                  <label className="text-xs text-gray-600">
+                  <label className="text-xs font-medium text-slate-600">
                     {ar ? 'إلى' : 'À'}
                     <input
                       name="endLocal"
                       type="time"
                       required
                       defaultValue="12:00"
-                      className="mt-1 block rounded border border-gray-300 px-2 py-1 text-sm"
+                      className="mt-1 block h-9 rounded-lg border border-slate-300 px-2 text-sm"
                     />
                   </label>
-                  <label className="text-xs text-gray-600">
+                  <label className="text-xs font-medium text-slate-600">
                     {ar ? 'مدة الموعد' : 'Durée'}
                     <select
                       name="slotMinutes"
                       defaultValue="30"
-                      className="mt-1 block rounded border border-gray-300 px-2 py-1 text-sm"
+                      className="mt-1 block h-9 rounded-lg border border-slate-300 px-2 text-sm"
                     >
                       {[10, 15, 20, 30, 45, 60].map((m) => (
                         <option key={m} value={m}>
@@ -158,11 +158,11 @@ export function AvailabilityEditor({
                       ))}
                     </select>
                   </label>
-                  <label className="text-xs text-gray-600">
+                  <label className="text-xs font-medium text-slate-600">
                     {ar ? 'العيادة' : 'Cabinet'}
                     <select
                       name="clinicId"
-                      className="mt-1 block rounded border border-gray-300 px-2 py-1 text-sm"
+                      className="mt-1 block h-9 rounded-lg border border-slate-300 px-2 text-sm"
                     >
                       {clinics.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -196,8 +196,8 @@ export function AvailabilityEditor({
 
       {/* ------------------------------------------------------------ exceptions */}
       <section>
-        <h2 className="text-lg font-semibold">{ar ? 'استثناءات' : 'Exceptions'}</h2>
-        <p className="mt-1 text-sm text-gray-500">
+        <h2 className="text-lg font-bold text-navy-950">{ar ? 'استثناءات' : 'Exceptions'}</h2>
+        <p className="mt-1 text-sm text-slate-500">
           {ar
             ? 'أيام العطل أو ساعات استثنائية. تتجاوز الجدول الأسبوعي.'
             : 'Congés ou horaires ponctuels. Priment sur les horaires hebdomadaires.'}
@@ -205,35 +205,35 @@ export function AvailabilityEditor({
 
         <form
           action={excFormAction}
-          className="mt-4 flex flex-wrap items-end gap-2 rounded-lg border border-gray-200 bg-white p-4"
+          className="medic-panel mt-4 flex flex-wrap items-end gap-3 p-4 sm:p-5"
         >
-          <label className="text-xs text-gray-600">
+          <label className="text-xs font-medium text-slate-600">
             {ar ? 'التاريخ' : 'Date'}
             <input
               name="date"
               type="date"
               required
-              className="mt-1 block rounded border border-gray-300 px-2 py-1 text-sm"
+              className="mt-1 block h-9 rounded-lg border border-slate-300 px-2 text-sm"
             />
           </label>
-          <label className="flex items-center gap-2 text-sm text-gray-700">
+          <label className="flex h-9 items-center gap-2 rounded-lg bg-slate-50 px-3 text-sm text-slate-700">
             <input name="isClosed" type="checkbox" defaultChecked className="rounded" />
             {ar ? 'مغلق طوال اليوم' : 'Fermé toute la journée'}
           </label>
-          <label className="text-xs text-gray-600">
+          <label className="text-xs font-medium text-slate-600">
             {ar ? 'من (اختياري)' : 'De (optionnel)'}
             <input
               name="startLocal"
               type="time"
-              className="mt-1 block rounded border border-gray-300 px-2 py-1 text-sm"
+              className="mt-1 block h-9 rounded-lg border border-slate-300 px-2 text-sm"
             />
           </label>
-          <label className="text-xs text-gray-600">
+          <label className="text-xs font-medium text-slate-600">
             {ar ? 'إلى (اختياري)' : 'À (optionnel)'}
             <input
               name="endLocal"
               type="time"
-              className="mt-1 block rounded border border-gray-300 px-2 py-1 text-sm"
+              className="mt-1 block h-9 rounded-lg border border-slate-300 px-2 text-sm"
             />
           </label>
           <Button type="submit" size="sm" variant="outline" disabled={excPending}>
@@ -248,7 +248,7 @@ export function AvailabilityEditor({
         )}
 
         {exceptions.length > 0 && (
-          <ul className="mt-4 divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+          <ul className="medic-panel mt-4 divide-y divide-slate-100">
             {exceptions.map((e) => (
               <li key={e.id} className="flex items-center justify-between px-4 py-2 text-sm">
                 <span className="tabular-nums">
