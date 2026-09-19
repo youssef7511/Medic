@@ -9,6 +9,7 @@ import { AllergyPanel } from '@/components/AllergyPanel';
 import { AppointmentStatusBadge } from '@/components/AppointmentStatusBadge';
 import { DocumentList, type DocumentRow } from '@/components/DocumentList';
 import { Link } from '@/i18n/navigation';
+import { CalendarDays, FileText, NotebookPen, Phone, Pill, UserRound } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -137,37 +138,30 @@ export default async function DoctorPatientPage({
 
   // ── Render ──────────────────────────────────────────────────────────────
   return (
-    <section className="max-w-3xl space-y-8">
+    <section className="max-w-5xl space-y-6">
       {/* ── Header ──────────────────────────────────────────────────────── */}
-      <div>
-        <h1 className="text-2xl font-bold">
-          {patient.firstName} {patient.lastName}
-        </h1>
-        <p className="mt-1 text-sm text-gray-500">
-          {ar ? 'رابط' : 'Lien'}: {linkId}
-        </p>
-      </div>
+      <div><p className="medic-kicker">{ar ? 'ملف المريض' : 'Dossier patient'}</p><div className="mt-3 flex items-center gap-4"><span className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-50 text-brand-700"><UserRound className="h-7 w-7" /></span><div><h1 className="medic-page-title">{patient.firstName} {patient.lastName}</h1><p className="mt-1 text-xs text-slate-400">{ar ? 'رابط الرعاية' : 'Lien de soin'} · {linkId.slice(0, 10)}…</p></div></div></div>
 
       {/* ── Demographics ────────────────────────────────────────────────── */}
-      <section className="rounded-lg border border-gray-200 bg-white p-4">
-        <h2 className="mb-3 text-sm font-semibold text-gray-700">
+      <section className="medic-panel p-5">
+        <h2 className="mb-4 text-sm font-bold text-navy-950">
           {ar ? 'المعلومات الأساسية' : 'Informations patient'}
         </h2>
         <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
           <div>
-            <dt className="text-gray-500">{ar ? 'تاريخ الميلاد' : 'Date de naissance'}</dt>
+            <dt className="text-slate-500">{ar ? 'تاريخ الميلاد' : 'Date de naissance'}</dt>
             <dd className="mt-0.5 font-medium">
               {patient.dateOfBirth.toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })}
-              <span className="ms-1 text-gray-400">({age} {ar ? 'سنة' : 'ans'})</span>
+              <span className="ms-1 text-slate-400">({age} {ar ? 'سنة' : 'ans'})</span>
             </dd>
           </div>
           <div>
-            <dt className="text-gray-500">{ar ? 'الجنس' : 'Sexe'}</dt>
+            <dt className="text-slate-500">{ar ? 'الجنس' : 'Sexe'}</dt>
             <dd className="mt-0.5 font-medium">{sexLabels[patient.sex]}</dd>
           </div>
           <div>
-            <dt className="text-gray-500">{ar ? 'الهاتف' : 'Téléphone'}</dt>
-            <dd className="mt-0.5 font-medium">{patient.phone}</dd>
+            <dt className="text-slate-500">{ar ? 'الهاتف' : 'Téléphone'}</dt>
+            <dd className="mt-0.5 flex items-center gap-1.5 font-medium"><Phone className="h-3.5 w-3.5 text-brand-600" />{patient.phone}</dd>
           </div>
         </dl>
       </section>
@@ -181,9 +175,9 @@ export default async function DoctorPatientPage({
       )}
 
       {/* ── Appointments ────────────────────────────────────────────────── */}
-      <section className="rounded-lg border border-gray-200 bg-white p-4">
+      <section className="medic-panel p-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-700">
+          <h2 className="flex items-center gap-2 text-sm font-bold text-navy-950"><CalendarDays className="h-4 w-4 text-brand-600" />
             {ar ? 'المواعيد' : 'Rendez-vous'}
           </h2>
           <Link
@@ -255,9 +249,9 @@ export default async function DoctorPatientPage({
       {isDoctor && (
         <>
           {/* ── Recent notes ─────────────────────────────────────────────── */}
-          <section className="rounded-lg border border-gray-200 bg-white p-4">
+          <section className="medic-panel p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-700">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-navy-950"><NotebookPen className="h-4 w-4 text-brand-600" />
                 {ar ? 'الملاحظات السريرية' : 'Notes cliniques'}
                 <span className="ms-2 text-xs font-normal text-gray-400">
                   {totalNotes > 0
@@ -318,9 +312,9 @@ export default async function DoctorPatientPage({
           </section>
 
           {/* ── Recent documents ─────────────────────────────────────────── */}
-          <section className="rounded-lg border border-gray-200 bg-white p-4">
+          <section className="medic-panel p-5">
             <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-gray-700">
+              <h2 className="flex items-center gap-2 text-sm font-bold text-navy-950"><FileText className="h-4 w-4 text-brand-600" />
                 {ar ? 'المستندات' : 'Documents'}
                 <span className="ms-2 text-xs font-normal text-gray-400">
                   {totalDocs > 0 ? `(${totalDocs})` : ''}
@@ -344,23 +338,26 @@ export default async function DoctorPatientPage({
           </section>
 
           {/* ── Quick actions ────────────────────────────────────────────── */}
-          <section className="flex flex-wrap gap-3">
+          <section className="flex flex-wrap gap-3 rounded-2xl bg-slate-100 p-3">
             <Link
               href={`/d/patients/${linkId}/prescribe`}
-              className="inline-block rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white hover:bg-brand-600"
+              className="inline-flex items-center gap-2 rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700"
             >
+              <Pill className="h-4 w-4" />
               {ar ? 'وصفة جديدة' : 'Nouvelle ordonnance'}
             </Link>
             <Link
               href={`/d/patients/${linkId}/notes`}
-              className="inline-block rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
+              <NotebookPen className="h-4 w-4" />
               {ar ? 'الملاحظات السريرية' : 'Notes cliniques'}
             </Link>
             <Link
               href={`/d/patients/${linkId}/documents`}
-              className="inline-block rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50"
             >
+              <FileText className="h-4 w-4" />
               {ar ? 'المستندات' : 'Documents'}
             </Link>
           </section>

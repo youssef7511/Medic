@@ -3,7 +3,7 @@ import { getCurrentActor } from '@/lib/auth/session';
 import { hasPermission } from '@/lib/rbac/guard';
 import { listDoctorThreads } from '@/lib/messaging/threads';
 import { Link } from '@/i18n/navigation';
-import { MessageSquare } from 'lucide-react';
+import { ArrowRight, MessageSquare } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,28 +30,24 @@ export default async function DoctorThreadsPage({
 
   return (
     <section>
-      <h1 className="mb-6 text-2xl font-bold">
-        {ar ? 'المحادثات' : 'Conversations'}
-      </h1>
+      <div><p className="medic-kicker">{ar ? 'متابعة المرضى' : 'Suivi des patients'}</p><h1 className="medic-page-title mt-2">{ar ? 'المحادثات' : 'Conversations'}</h1><p className="mt-2 text-sm text-slate-500">{ar ? 'الرسائل السريرية الآمنة مع مرضاك.' : 'Messagerie clinique sécurisée avec vos patients.'}</p></div>
 
       {threads.length === 0 ? (
-        <p className="text-sm text-gray-500">
-          {ar ? 'لا توجد محادثات بعد.' : 'Aucune conversation pour le moment.'}
-        </p>
+        <div className="medic-panel mt-6 p-10 text-center"><MessageSquare className="mx-auto h-10 w-10 text-slate-300" /><p className="mt-4 text-sm text-slate-500">{ar ? 'لا توجد محادثات بعد.' : 'Aucune conversation pour le moment.'}</p></div>
       ) : (
-        <ul className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+        <ul className="medic-panel mt-6 divide-y divide-slate-100">
           {threads.map((thread) => (
             <li key={thread.id}>
               <Link
                 href={`/d/threads/${thread.id}`}
-                className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50"
+                className="group flex items-center justify-between gap-4 px-5 py-4 hover:bg-slate-50"
               >
                 <div className="flex items-center gap-3">
-                  <MessageSquare className="h-5 w-5 shrink-0 text-gray-400" />
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-brand-50 text-brand-700"><MessageSquare className="h-5 w-5" /></span>
                   <div>
-                    <p className="text-sm font-medium">{thread.patientName}</p>
+                    <p className="text-sm font-bold text-navy-950">{thread.patientName}</p>
                     {thread.lastMessagePreview && (
-                      <p className="mt-0.5 truncate text-xs text-gray-500 max-w-xs">
+                      <p className="mt-1 max-w-xs truncate text-xs text-slate-500">
                         {thread.lastMessagePreview}
                       </p>
                     )}
@@ -66,11 +62,11 @@ export default async function DoctorThreadsPage({
                       })}
                     </time>
                   )}
-                  {thread.unreadCount > 0 && (
+                  {thread.unreadCount > 0 ? (
                     <span className="rounded-full bg-brand-500 px-2 py-0.5 text-xs font-medium text-white">
                       {thread.unreadCount}
                     </span>
-                  )}
+                  ) : <ArrowRight className="h-4 w-4 text-slate-300 group-hover:text-brand-600 rtl:rotate-180" />}
                 </div>
               </Link>
             </li>

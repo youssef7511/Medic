@@ -71,7 +71,7 @@ export function PrescribeForm({
 
   if (state.ok) {
     return (
-      <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
         <p className="font-medium text-green-800">
           {ar ? 'تم إصدار الوصفة.' : "L'ordonnance a été émise."}
         </p>
@@ -91,39 +91,39 @@ export function PrescribeForm({
     <div className="space-y-4">
       <div className="space-y-3">
         {rows.map((row, i) => (
-          <div key={i} className="rounded-lg border border-gray-200 bg-white p-3">
-            <div className="flex flex-wrap gap-2">
+          <div key={i} className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4">
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(160px,1.4fr)_1fr_1fr_90px_auto]">
               <input
                 value={row.drug}
                 onChange={(e) => update(i, 'drug', e.target.value)}
                 placeholder={ar ? 'الدواء *' : 'Médicament *'}
-                className="min-w-40 flex-1 rounded border border-gray-300 px-2 py-1 text-sm"
+                className="h-10 min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm"
               />
               <input
                 value={row.dose}
                 onChange={(e) => update(i, 'dose', e.target.value)}
                 placeholder={ar ? 'الجرعة *' : 'Posologie *'}
-                className="w-28 rounded border border-gray-300 px-2 py-1 text-sm"
+                className="h-10 min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm"
               />
               <input
                 value={row.frequency}
                 onChange={(e) => update(i, 'frequency', e.target.value)}
                 placeholder={ar ? 'التواتر' : 'Fréquence'}
-                className="w-28 rounded border border-gray-300 px-2 py-1 text-sm"
+                className="h-10 min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm"
               />
               <input
                 value={row.durationDays}
                 onChange={(e) => update(i, 'durationDays', e.target.value.replace(/\D/g, ''))}
                 inputMode="numeric"
                 placeholder={ar ? 'أيام' : 'Jours'}
-                className="w-20 rounded border border-gray-300 px-2 py-1 text-sm"
+                className="h-10 min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm"
               />
               {rows.length > 1 && (
                 <button
                   type="button"
                   onClick={() => setRows((prev) => prev.filter((_, idx) => idx !== i))}
                   aria-label={ar ? 'حذف' : 'Supprimer'}
-                  className="px-1 text-red-600"
+                  className="grid h-10 w-10 place-items-center rounded-xl text-red-600 hover:bg-red-50"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -133,7 +133,7 @@ export function PrescribeForm({
               value={row.instructions}
               onChange={(e) => update(i, 'instructions', e.target.value)}
               placeholder={ar ? 'تعليمات' : 'Instructions'}
-              className="mt-2 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+              className="mt-3 h-10 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm"
             />
           </div>
         ))}
@@ -147,7 +147,7 @@ export function PrescribeForm({
       )}
 
       <div>
-        <label htmlFor="notes" className="block text-sm font-medium">
+        <label htmlFor="notes" className="medic-label">
           {ar ? 'ملاحظات' : 'Notes'}
         </label>
         <textarea
@@ -156,18 +156,18 @@ export function PrescribeForm({
           onChange={(e) => setNotes(e.target.value)}
           rows={2}
           dir="auto"
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm"
+          className="medic-textarea"
         />
       </div>
 
       {/* The mandatory acknowledgment (§3.1). Its label reminds the doctor when
           the allergy state was never recorded. */}
-      <label className="flex items-start gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3 text-sm">
+      <label className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm">
         <input
           type="checkbox"
           checked={acknowledged}
           onChange={(e) => setAcknowledged(e.target.checked)}
-          className="mt-0.5"
+          className="mt-0.5 h-4 w-4 accent-brand-600"
         />
         <span>
           {ar ? 'أؤكّد أنني راجعت الحساسيات المعروفة.' : "Je confirme avoir examiné les allergies connues."}

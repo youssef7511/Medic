@@ -32,12 +32,12 @@ export function AllergyForm({
 
   return (
     <div className="space-y-4">
-      <label className="flex items-start gap-2 text-sm">
+      <label className="flex items-start gap-3 rounded-2xl bg-slate-50 p-4 text-sm">
         <input
           type="checkbox"
           checked={affirmedNone}
           onChange={(e) => setAffirmedNone(e.target.checked)}
-          className="mt-0.5"
+          className="mt-0.5 h-4 w-4 accent-brand-600"
         />
         <span>
           {ar
@@ -47,7 +47,7 @@ export function AllergyForm({
       </label>
 
       <div className={affirmedNone ? 'opacity-40' : ''}>
-        <label htmlFor="allergies" className="block text-sm font-medium">
+        <label htmlFor="allergies" className="medic-label">
           {ar ? 'الحساسيات الدوائية' : 'Allergies médicamenteuses'}
         </label>
         <textarea
@@ -59,7 +59,7 @@ export function AllergyForm({
           dir="auto"
           maxLength={2000}
           placeholder={ar ? 'مثال: البنسلين' : 'Ex. : pénicilline'}
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2 text-sm disabled:bg-gray-50"
+          className="medic-textarea"
         />
       </div>
 

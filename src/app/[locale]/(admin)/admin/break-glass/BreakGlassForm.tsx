@@ -13,7 +13,7 @@ export function BreakGlassForm({ locale }: { locale: string }) {
 
   if (state.grantId) {
     return (
-      <div className="rounded-lg border-2 border-red-500 bg-red-50 p-4">
+      <div className="rounded-2xl border-2 border-red-400 bg-red-50 p-5">
         <p className="font-semibold text-red-900">
           {ar ? 'تم تفعيل الوصول الطارئ وتم إشعار المريض.' : 'Accès d’urgence activé et notification patient programmée.'}
         </p>
@@ -25,32 +25,32 @@ export function BreakGlassForm({ locale }: { locale: string }) {
   }
 
   return (
-    <form action={action} className="space-y-4 rounded-lg border-2 border-red-300 bg-white p-5">
+    <form action={action} className="medic-panel space-y-5 border-red-200 p-5 sm:p-6">
       <div>
-        <label htmlFor="patient" className="block text-sm font-medium">
+        <label htmlFor="patient" className="medic-label">
           {ar ? 'معرّف المريض أو البريد الإلكتروني' : 'Identifiant patient ou e-mail exact'}
         </label>
-        <input id="patient" name="patient" required className="mt-1 w-full rounded border px-3 py-2" />
+        <input id="patient" name="patient" required className="medic-input" />
       </div>
       <div>
-        <label htmlFor="reason" className="block text-sm font-medium">
+        <label htmlFor="reason" className="medic-label">
           {ar ? 'سبب طارئ مفصل' : 'Justification d’urgence détaillée'}
         </label>
-        <textarea id="reason" name="reason" required minLength={20} maxLength={500} rows={4} className="mt-1 w-full rounded border px-3 py-2" />
+        <textarea id="reason" name="reason" required minLength={20} maxLength={500} rows={4} className="medic-textarea" />
       </div>
       <div>
-        <label htmlFor="durationMinutes" className="block text-sm font-medium">
+        <label htmlFor="durationMinutes" className="medic-label">
           {ar ? 'المدة' : 'Durée'}
         </label>
-        <select id="durationMinutes" name="durationMinutes" defaultValue="15" className="mt-1 w-full rounded border px-3 py-2">
+        <select id="durationMinutes" name="durationMinutes" defaultValue="15" className="medic-input">
           <option value="5">5 min</option>
           <option value="15">15 min</option>
           <option value="30">30 min</option>
         </select>
       </div>
       <div>
-        <label htmlFor="totp" className="block text-sm font-medium">Code MFA</label>
-        <input id="totp" name="totp" inputMode="numeric" autoComplete="one-time-code" required pattern="[0-9]{6}" className="mt-1 w-full rounded border px-3 py-2 tracking-widest" />
+        <label htmlFor="totp" className="medic-label">Code MFA</label>
+        <input id="totp" name="totp" inputMode="numeric" autoComplete="one-time-code" required pattern="[0-9]{6}" maxLength={6} className="medic-input text-center text-lg font-semibold tracking-[0.35em]" />
       </div>
       {state.error && <p role="alert" className="text-sm text-red-700">{state.error}</p>}
       <Button type="submit" variant="destructive" disabled={pending}>
