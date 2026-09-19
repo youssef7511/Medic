@@ -20,14 +20,28 @@ const config: Config = {
         arabic: ['var(--font-arabic)', 'sans-serif'],
       },
       colors: {
-        // Placeholder brand ramp — replace with the real palette.
-        brand: {
-          50: '#eef6ff',
-          100: '#d9ecff',
-          500: '#2f7cf6',
-          600: '#1f63d6',
-          700: '#1a4fac',
+        navy: {
+          50: '#f2f6fa',
+          100: '#dfe8f1',
+          800: '#173655',
+          900: '#0d2945',
+          950: '#071d36',
         },
+        brand: {
+          50: '#ecfdfc',
+          100: '#cffaf7',
+          200: '#9bf4ef',
+          300: '#5be6e1',
+          400: '#25ceca',
+          500: '#0eaaa9',
+          600: '#078889',
+          700: '#096c6e',
+          800: '#0d5759',
+          900: '#10494a',
+        },
+      },
+      boxShadow: {
+        card: '0 12px 35px -20px rgba(7, 29, 54, 0.28)',
       },
     },
   },

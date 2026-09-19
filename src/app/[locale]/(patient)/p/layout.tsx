@@ -17,9 +17,9 @@ export default async function PatientLayout({
   const t = await getTranslations();
 
   const nav = [
-    { href: '/p', label: t('nav.myDoctors') },
-    { href: '/p/appointments', label: t('nav.myAppointments') },
-    { href: '/p/allergies', label: locale === 'ar' ? 'الحساسيات' : 'Allergies' },
+    { href: '/p', label: locale === 'ar' ? 'الرئيسية' : 'Accueil', icon: 'dashboard' as const },
+    { href: '/p/appointments', label: t('nav.myAppointments'), icon: 'calendar' as const },
+    { href: '/p/allergies', label: locale === 'ar' ? 'الحساسيات' : 'Allergies', icon: 'allergies' as const },
   ];
 
   return (

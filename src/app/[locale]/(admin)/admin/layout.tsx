@@ -19,15 +19,15 @@ export default async function AdminLayout({
   const ar = locale === 'ar';
 
   const nav = [
-    { href: '/admin', label: ar ? 'لوحة التحكم' : 'Tableau de bord' },
-    { href: '/admin/doctors', label: ar ? 'أطباء' : 'Médecins' },
-    { href: '/admin/users', label: ar ? 'المستخدمون' : 'Utilisateurs' },
-    { href: '/admin/audit', label: ar ? 'سجل التدقيق' : 'Journal d\'audit' },
+    { href: '/admin', label: ar ? 'لوحة التحكم' : 'Tableau de bord', icon: 'dashboard' as const },
+    { href: '/admin/doctors', label: ar ? 'أطباء' : 'Médecins', icon: 'doctors' as const },
+    { href: '/admin/users', label: ar ? 'المستخدمون' : 'Utilisateurs', icon: 'users' as const },
+    { href: '/admin/audit', label: ar ? 'سجل التدقيق' : 'Journal d\'audit', icon: 'audit' as const },
     ...(hasPermission(actor, 'platform_settings:read')
-      ? [{ href: '/admin/settings', label: ar ? 'إعدادات المنصة' : 'Paramètres' }]
+      ? [{ href: '/admin/settings', label: ar ? 'إعدادات المنصة' : 'Paramètres', icon: 'settings' as const }]
       : []),
     ...(hasPermission(actor, 'break_glass:activate')
-      ? [{ href: '/admin/break-glass', label: 'Break-glass' }]
+      ? [{ href: '/admin/break-glass', label: 'Break-glass', icon: 'emergency' as const, danger: true }]
       : []),
   ];
 

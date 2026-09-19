@@ -13,17 +13,14 @@ export function LocaleSwitcher() {
   const router = useRouter();
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center rounded-xl border border-slate-200 bg-slate-50 p-1">
       {locales.map((locale) => (
         <button
           key={locale}
           type="button"
           aria-current={locale === active}
           onClick={() => router.replace(pathname, { locale })}
-          className={
-            'rounded px-2 py-1 text-sm ' +
-            (locale === active ? 'bg-brand-500 text-white' : 'text-gray-600 hover:bg-gray-100')
-          }
+          className={'rounded-lg px-2.5 py-1.5 text-xs font-semibold transition ' + (locale === active ? 'bg-navy-950 text-white shadow-sm' : 'text-slate-500 hover:bg-white hover:text-navy-950')}
         >
           {LABEL[locale]}
         </button>
