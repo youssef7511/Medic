@@ -78,17 +78,14 @@ export default async function AvailabilityPage({
 
   return (
     <section>
-      <h1 className="text-2xl font-bold">{ar ? 'ساعات العمل' : 'Disponibilités'}</h1>
-      <p className="mb-6 mt-1 text-sm text-gray-500">
-        {ar ? 'المنطقة الزمنية' : 'Fuseau horaire'}: {doctor.timezone}
-      </p>
+      <div><p className="medic-kicker">{ar ? 'إعدادات التقويم' : 'Configuration de l’agenda'}</p><h1 className="medic-page-title mt-2">{ar ? 'ساعات العمل' : 'Disponibilités'}</h1><p className="mt-2 text-sm text-slate-500">{ar ? 'حدد ساعات الاستشارة والاستثناءات.' : 'Définissez les horaires de consultation et les exceptions.'}</p><span className="mt-3 inline-flex rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{ar ? 'المنطقة الزمنية' : 'Fuseau horaire'} · {doctor.timezone}</span></div>
 
-      <AvailabilityEditor
+      <div className="mt-7"><AvailabilityEditor
         rules={ruleViews}
         exceptions={exceptionViews}
         clinics={doctor.clinics}
         locale={locale}
-      />
+      /></div>
     </section>
   );
 }

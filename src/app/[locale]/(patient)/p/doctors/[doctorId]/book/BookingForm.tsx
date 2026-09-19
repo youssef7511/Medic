@@ -3,6 +3,8 @@
 import { useActionState, useState } from 'react';
 import { useLocale } from 'next-intl';
 import { bookSlotAction, type BookFormState } from './actions';
+import { CalendarCheck, CheckCircle2, Clock3 } from 'lucide-react';
+import { Link } from '@/i18n/navigation';
 
 export interface SlotView {
   /** ISO UTC instant — the value actually submitted. */
@@ -29,15 +31,16 @@ export function BookingForm({
 
   if (state.status === 'booked') {
     return (
-      <div role="status" className="rounded-lg border border-green-200 bg-green-50 p-4">
-        <p className="font-medium text-green-800">
+      <div role="status" className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+        <CheckCircle2 className="mx-auto h-10 w-10 text-emerald-600" />
+        <p className="mt-3 font-bold text-emerald-900">
           {locale === 'ar' ? 'تم إرسال طلب الموعد.' : 'Demande de rendez-vous envoyée.'}
         </p>
-        <p className="mt-1 text-sm text-green-700">
+        <p className="mt-2 text-sm text-emerald-700">
           {locale === 'ar'
             ? 'سيؤكّد الطبيب موعدك قريبًا.'
             : 'Le médecin confirmera votre rendez-vous prochainement.'}
-        </p>
+        </p><Link href="/p/appointments" className="mt-4 inline-flex rounded-xl bg-emerald-700 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800">{locale === 'ar' ? 'عرض مواعيدي' : 'Voir mes rendez-vous'}</Link>
       </div>
     );
   }
@@ -50,11 +53,11 @@ export function BookingForm({
 
   if (slots.length === 0) {
     return (
-      <p className="text-gray-500">
+      <div className="py-8 text-center"><CalendarCheck className="mx-auto h-10 w-10 text-slate-300" /><p className="mt-3 text-sm text-slate-500">
         {locale === 'ar'
           ? 'لا توجد مواعيد متاحة حاليًا.'
           : 'Aucun créneau disponible pour le moment.'}
-      </p>
+      </p></div>
     );
   }
 
@@ -64,10 +67,10 @@ export function BookingForm({
       <input type="hidden" name="clinicId" value={clinicId} />
       <input type="hidden" name="startAt" value={selected ?? ''} />
 
-      <div className="space-y-5">
+      <div className="grid gap-4 sm:grid-cols-2">
         {Object.entries(byDay).map(([day, daySlots]) => (
-          <div key={day}>
-            <h3 className="text-sm font-medium text-gray-700">{day}</h3>
+          <div key={day} className="rounded-2xl border border-slate-200 p-4">
+            <h3 className="flex items-center gap-2 text-sm font-bold capitalize text-navy-950"><CalendarCheck className="h-4 w-4 text-brand-600" />{day}</h3>
             <div className="mt-2 flex flex-wrap gap-2">
               {daySlots.map((s) => {
                 const isSelected = selected === s.startAt;
@@ -80,8 +83,8 @@ export function BookingForm({
                     className={
                       'rounded border px-3 py-1.5 text-sm ' +
                       (isSelected
-                        ? 'border-brand-600 bg-brand-500 text-white'
-                        : 'border-gray-300 bg-white hover:border-brand-500')
+                        ? 'border-brand-600 bg-brand-600 text-white shadow-sm'
+                        : 'border-slate-300 bg-white text-slate-700 hover:border-brand-500 hover:bg-brand-50')
                     }
                   >
                     {s.timeLabel}
@@ -94,7 +97,7 @@ export function BookingForm({
       </div>
 
       <div>
-        <label htmlFor="reason" className="block text-sm font-medium">
+        <label htmlFor="reason" className="medic-label">
           {locale === 'ar' ? 'سبب الزيارة (اختياري)' : 'Motif de la visite (facultatif)'}
         </label>
         <textarea
@@ -102,7 +105,8 @@ export function BookingForm({
           name="reason"
           rows={3}
           maxLength={500}
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+          placeholder={locale === 'ar' ? 'صف بإيجاز سبب الموعد…' : 'Décrivez brièvement la raison du rendez-vous…'}
+          className="medic-textarea"
         />
       </div>
 
@@ -112,13 +116,7 @@ export function BookingForm({
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={pending || !selected}
-        className="rounded bg-brand-500 px-5 py-2 font-medium text-white hover:bg-brand-600 disabled:opacity-50"
-      >
-        {locale === 'ar' ? 'تأكيد الحجز' : 'Confirmer le rendez-vous'}
-      </button>
+      <div className="flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between"><p className="flex items-center gap-2 text-xs text-slate-500"><Clock3 className="h-4 w-4" />{selected ? (locale === 'ar' ? 'تم اختيار موعد' : 'Créneau sélectionné') : (locale === 'ar' ? 'اختر موعدًا للمتابعة' : 'Sélectionnez un créneau pour continuer')}</p><button type="submit" disabled={pending || !selected} className="rounded-xl bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm hover:bg-brand-700 disabled:opacity-50">{pending ? (locale === 'ar' ? 'جارٍ الإرسال…' : 'Envoi…') : (locale === 'ar' ? 'تأكيد الحجز' : 'Confirmer le rendez-vous')}</button></div>
     </form>
   );
 }

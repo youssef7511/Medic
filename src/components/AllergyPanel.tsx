@@ -12,7 +12,7 @@ export function AllergyPanel({ state, locale }: { state: AllergyState; locale: s
 
   if (state.kind === 'listed') {
     return (
-      <div className="flex items-start gap-2 rounded-lg border border-red-300 bg-red-50 p-4">
+      <div className="flex items-start gap-3 rounded-2xl border border-red-200 bg-red-50 p-4">
         <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" />
         <div>
           <p className="text-sm font-semibold text-red-800">
@@ -28,7 +28,7 @@ export function AllergyPanel({ state, locale }: { state: AllergyState; locale: s
 
   if (state.kind === 'none') {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-green-300 bg-green-50 p-4">
+      <div className="flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
         <ShieldCheck className="h-5 w-5 shrink-0 text-green-600" />
         <p className="text-sm text-green-800">
           {ar ? 'لا حساسية دوائية معروفة (مؤكَّدة)' : 'Aucune allergie médicamenteuse connue (confirmé)'}
@@ -38,7 +38,7 @@ export function AllergyPanel({ state, locale }: { state: AllergyState; locale: s
   }
 
   return (
-    <div className="flex items-center gap-2 rounded-lg border border-amber-300 bg-amber-50 p-4">
+    <div className="flex items-center gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
       <HelpCircle className="h-5 w-5 shrink-0 text-amber-600" />
       <p className="text-sm text-amber-800">
         {ar

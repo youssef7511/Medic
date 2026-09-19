@@ -76,7 +76,7 @@ export function CalendarClient({
         <p className="text-sm font-medium capitalize text-gray-700">{calendar.rangeLabel}</p>
       </div>
 
-      <div className="rounded-lg border border-gray-200 bg-white">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
         <WeekGrid
           days={calendar.days}
           events={calendar.events}

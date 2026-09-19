@@ -35,9 +35,9 @@ export function MessageForm({
   }, [state.ok]);
 
   return (
-    <div className="border-t border-gray-200 bg-white p-4">
+    <div className="border-t border-slate-200 bg-white p-4">
       {/* Safety banner (§7) */}
-      <p className="mb-3 rounded bg-amber-50 p-2 text-center text-xs text-amber-800">
+      <p className="mb-3 rounded-xl bg-amber-50 p-2.5 text-center text-xs text-amber-800">
         {ar
           ? 'هذه الخدمة ليست مخصّصة للحالات الطارئة. في حال الطوارئ اتصل بالإسعاف.'
           : 'Ce service n\'est pas destiné aux urgences. En cas d\'urgence, appelez les secours.'}
@@ -58,7 +58,7 @@ export function MessageForm({
           maxLength={5000}
           dir="auto"
           placeholder={ar ? 'اكتب رسالتك…' : 'Écrivez votre message…'}
-          className="flex-1 resize-none rounded border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
+          className="flex-1 resize-none rounded-xl border border-slate-300 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-brand-500"
         />
         <Button type="submit" size="icon" disabled={pending}>
           <Send className="h-4 w-4" />

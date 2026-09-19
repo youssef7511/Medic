@@ -45,8 +45,8 @@ export default async function CalendarPage({
 
   return (
     <section>
-      <h1 className="mb-4 text-2xl font-bold">{locale === 'ar' ? 'التقويم' : 'Agenda'}</h1>
-      <CalendarClient calendar={calendar} weekParam={weekParam} locale={locale} />
+      <div className="mb-6"><p className="medic-kicker">{locale === 'ar' ? 'إدارة الوقت' : 'Organisation du cabinet'}</p><h1 className="medic-page-title mt-2">{locale === 'ar' ? 'التقويم' : 'Agenda'}</h1><p className="mt-2 text-sm text-slate-500">{locale === 'ar' ? 'راجع مواعيد الأسبوع وساعات العمل.' : 'Consultez les rendez-vous et les plages de disponibilité de la semaine.'}</p></div>
+      <div className="medic-card p-4 sm:p-5"><CalendarClient calendar={calendar} weekParam={weekParam} locale={locale} /></div>
     </section>
   );
 }

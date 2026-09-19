@@ -12,6 +12,8 @@
 :root {
   --font-latin: ui-sans-serif, system-ui, 'Segoe UI', Roboto, sans-serif;
   --font-arabic: 'Segoe UI', 'Noto Sans Arabic', 'Geeza Pro', sans-serif;
+  --background: #f8fafc;
+  --foreground: #071d36;
 }
 
 html[lang='ar'] {
@@ -21,8 +23,62 @@ html[lang='ar'] {
 body {
   min-height: 100vh;
   font-family: var(--font-latin), var(--font-arabic);
+  background: var(--background);
+  color: var(--foreground);
+  text-rendering: optimizeLegibility;
 }
 
 html[lang='ar'] body {
   font-family: var(--font-arabic);
+}
+
+::selection {
+  background: #9bf4ef;
+  color: #071d36;
+}
+
+@layer base {
+  * {
+    border-color: theme('colors.slate.200');
+  }
+
+  input,
+  select,
+  textarea {
+    @apply outline-none transition-shadow focus:border-brand-500 focus:ring-2 focus:ring-brand-100;
+  }
+}
+
+@layer components {
+  .medic-card {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-card;
+  }
+
+  .medic-kicker {
+    @apply text-xs font-semibold uppercase tracking-[0.16em] text-brand-700;
+  }
+
+  .medic-page-title {
+    @apply text-2xl font-bold tracking-tight text-navy-950 sm:text-3xl;
+  }
+
+  .medic-muted {
+    @apply text-sm leading-6 text-slate-500;
+  }
+
+  .medic-panel {
+    @apply overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-card;
+  }
+
+  .medic-label {
+    @apply block text-sm font-semibold text-navy-950;
+  }
+
+  .medic-input {
+    @apply mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-400 disabled:bg-slate-50 disabled:text-slate-500;
+  }
+
+  .medic-textarea {
+    @apply mt-2 w-full rounded-xl border border-slate-300 bg-white px-3 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 disabled:bg-slate-50 disabled:text-slate-500;
+  }
 }

@@ -14,11 +14,11 @@ export const DialogContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
   <DialogPrimitive.Portal>
-    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-black/40" />
+    <DialogPrimitive.Overlay className="fixed inset-0 z-50 bg-navy-950/55 backdrop-blur-sm" />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        'fixed start-1/2 top-1/2 z-50 w-full max-w-lg -translate-y-1/2 rounded-lg border border-gray-200 bg-white p-6 shadow-lg',
+        'fixed start-1/2 top-1/2 z-50 w-[calc(100%-2rem)] max-w-lg -translate-y-1/2 rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl',
         // RTL-safe centering: translate on the inline axis flips with direction,
         // so this stays centred in both ltr and rtl.
         'rtl:translate-x-1/2 ltr:-translate-x-1/2',
@@ -27,7 +27,7 @@ export const DialogContent = React.forwardRef<
       {...props}
     >
       {children}
-      <DialogPrimitive.Close className="absolute end-4 top-4 rounded text-gray-400 hover:text-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
+      <DialogPrimitive.Close className="absolute end-4 top-4 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-navy-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-500">
         <X className="h-4 w-4" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
@@ -46,7 +46,7 @@ export const DialogTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Title
     ref={ref}
-    className={cn('text-lg font-semibold text-gray-900', className)}
+    className={cn('text-lg font-bold text-navy-950', className)}
     {...props}
   />
 ));
@@ -58,7 +58,7 @@ export const DialogDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <DialogPrimitive.Description
     ref={ref}
-    className={cn('text-sm text-gray-500', className)}
+    className={cn('text-sm leading-6 text-slate-500', className)}
     {...props}
   />
 ));
