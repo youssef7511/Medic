@@ -4,10 +4,11 @@ import { useActionState, useEffect, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { loginAction, type AuthFormState } from './actions';
+import type { LoginPortal } from '@/lib/auth/portals';
 
 const initial: AuthFormState = {};
 
-export function LoginForm({ next }: { next?: string }) {
+export function LoginForm({ next, portal }: { next?: string; portal: LoginPortal }) {
   const locale = useLocale();
   const t = useTranslations();
   const [state, formAction, pending] = useActionState(loginAction, initial);
@@ -34,6 +35,7 @@ export function LoginForm({ next }: { next?: string }) {
     <form action={formAction} className="space-y-5">
       <input type="hidden" name="locale" value={locale} />
       <input type="hidden" name="next" value={next ?? ''} />
+      <input type="hidden" name="portal" value={portal} />
 
       <div>
         <label htmlFor="email" className="block text-sm font-semibold text-navy-950">
