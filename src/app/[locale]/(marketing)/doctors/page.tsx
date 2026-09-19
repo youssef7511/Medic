@@ -127,7 +127,7 @@ export default async function DoctorsDirectoryPage({
                           </div>
                           <div className="mt-5 flex flex-wrap gap-3">
                             <Link href={`/doctors/${doctor.slug}`} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-navy-950 hover:border-brand-400 hover:bg-brand-50">{t('directory.viewProfile')}</Link>
-                            <Link href={`/login?next=/p/doctors/${doctor.id}/book`} className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">{t('common.book')}</Link>
+                            <Link href={`/login/patient?next=/p/doctors/${doctor.id}/book`} className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">{t('common.book')}</Link>
                           </div>
                         </div>
                       </div>
@@ -149,7 +149,7 @@ export default async function DoctorsDirectoryPage({
                 <>
                   <div className="flex items-center gap-3"><DoctorAvatar name={localText(featured.headline, locale) || featured.slug} small /><div><p className="text-sm font-bold text-navy-950">{localText(featured.headline, locale) || featured.slug}</p><p className="text-xs text-slate-500">{localText(featured.specialty.name, locale)}</p></div></div>
                   <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600"><p className="font-semibold text-navy-950">{ar ? 'مواعيد مرنة' : 'Créneaux flexibles'}</p><p className="mt-1 text-xs leading-5">{ar ? 'التوافر الفعلي يظهر بعد تسجيل الدخول.' : 'Les disponibilités réelles apparaissent après connexion.'}</p></div>
-                  <Link href={`/login?next=/p/doctors/${featured.id}/book`} className="mt-5 block rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700">{t('common.book')}</Link>
+                  <Link href={`/login/patient?next=/p/doctors/${featured.id}/book`} className="mt-5 block rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700">{t('common.book')}</Link>
                 </>
               ) : <p className="text-sm text-slate-500">{t('directory.empty')}</p>}
               <p className="mt-5 flex items-start gap-2 text-xs leading-5 text-slate-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{ar ? 'محترفون تم التحقق منهم للحصول على رعاية موثوقة.' : 'Professionnels vérifiés pour une prise en charge de confiance.'}</p>

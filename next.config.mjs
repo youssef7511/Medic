@@ -6,6 +6,9 @@ const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  // Produces `.next/standalone/server.js`, which is the entrypoint copied by
+  // the production Docker image.
+  output: 'standalone',
   // §10: keep the app host-agnostic. No provider-specific runtime primitives.
   // Security headers live here so every response carries them.
   async headers() {

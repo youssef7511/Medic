@@ -7,6 +7,7 @@ import { prisma } from '@/lib/db';
 import { verifyPassword, fakeVerify } from '@/lib/auth/password';
 import { rolesRequireMfa, verifyMfaToken } from '@/lib/auth/totp';
 import { clearLoginFailures, isLoginLocked, recordLoginFailure } from '@/lib/auth/lockout';
+import { LOGIN_PORTALS, rolesAllowPortal } from '@/lib/auth/portals';
 
 // Distinct codes so the UI can ask for a TOTP code without ever revealing
 // whether the email/password pair was valid to an unauthenticated caller.
@@ -24,6 +25,7 @@ const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
   totp: z.string().optional(),
+  portal: z.enum(LOGIN_PORTALS),
 });
 
 const SESSION_DAYS = 7;
@@ -46,12 +48,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
         totp: { label: 'Authentication code', type: 'text' },
+        portal: { label: 'Login portal', type: 'text' },
       },
 
       async authorize(raw) {
         const parsed = credentialsSchema.safeParse(raw);
         if (!parsed.success) return null;
-        const { email, password, totp } = parsed.data;
+        const { email, password, totp, portal } = parsed.data;
 
         const user = await prisma.user.findUnique({
           where: { email },
@@ -77,6 +80,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         if (isLoginLocked(user.lockedUntil)) return null;
 
         if (user.status !== UserStatus.ACTIVE) throw new AccountSuspendedError();
+
+        // Separate login entry points are enforced here, after the password
+        // check, so they cannot be bypassed by posting directly to Auth.js and
+        // do not reveal an account's roles to an unauthenticated caller.
+        if (!rolesAllowPortal(user.roleAssignments, portal)) return null;
 
         // §10: MFA gate for clinical/admin roles. Checked AFTER the password so
         // an attacker without valid credentials learns nothing about MFA state.

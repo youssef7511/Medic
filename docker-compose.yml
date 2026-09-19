@@ -8,14 +8,33 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=production
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.docker}
+      AUTH_SECRET: ${AUTH_SECRET:?Set AUTH_SECRET in .env.docker}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY:?Set ENCRYPTION_MASTER_KEY in .env.docker}
     env_file:
       - .env.docker
     depends_on:
-      - pg
-      - minio
-    volumes:
-      - ./.env.local:/app/.env.local:ro
+      pg:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      migrate:
+        condition: service_completed_successfully
+
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      target: builder
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in .env.docker}
+    depends_on:
+      pg:
+        condition: service_healthy
+    command: ["npx", "prisma", "migrate", "deploy"]
+    restart: "no"
 
   pg:
     image: postgres:16-alpine
@@ -27,6 +46,11 @@ services:
       - "5432:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   minio:
     image: minio/minio

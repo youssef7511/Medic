@@ -6,10 +6,11 @@ import { Role, ScopeType, Sex } from '@prisma/client';
 import { signIn } from '@/auth';
 import { prisma } from '@/lib/db';
 import { hashPassword } from '@/lib/auth/password';
-import { defaultLandingFor, safeNextPath } from '@/lib/auth/redirects';
+import { safeNextPath } from '@/lib/auth/redirects';
 import { audit } from '@/lib/audit';
 import { GLOBAL_SCOPE_ID } from '@/lib/admin/role-assignment';
 import { getPlatformSettings } from '@/lib/admin/platform-settings-service';
+import { LOGIN_PORTALS, portalLanding, portalOwnsPath } from '@/lib/auth/portals';
 
 export type AuthFormState = {
   error?:
@@ -25,6 +26,7 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),
   totp: z.string().trim().optional(),
+  portal: z.enum(LOGIN_PORTALS),
 });
 
 export async function loginAction(
@@ -38,6 +40,7 @@ export async function loginAction(
     email: formData.get('email'),
     password: formData.get('password'),
     totp: formData.get('totp') || undefined,
+    portal: formData.get('portal') || undefined,
   });
   if (!parsed.success) return { error: 'invalid' };
 
@@ -55,15 +58,16 @@ export async function loginAction(
     return { error: 'invalid', email: parsed.data.email };
   }
 
-  // Land the user in the space their roles actually grant, unless they were
-  // sent here from a specific page.
-  const user = await prisma.user.findUnique({
-    where: { email: parsed.data.email },
-    select: { roleAssignments: { select: { role: true } } },
-  });
-  const landing = defaultLandingFor(user?.roleAssignments ?? [], locale);
+  // Stay inside the selected portal even when `next` names another protected
+  // space; the credentials provider already proved that this role is allowed.
+  const landing = portalLanding(parsed.data.portal, locale);
 
-  redirect(safeNextPath(rawNext, locale, landing));
+  const safeDestination = safeNextPath(rawNext, locale, landing);
+  const destination = !portalOwnsPath(parsed.data.portal, safeDestination, locale)
+    ? landing
+    : safeDestination;
+
+  redirect(destination);
 }
 
 const registerSchema = z.object({
@@ -160,6 +164,7 @@ export async function registerAction(
   await signIn('credentials', {
     email: data.email,
     password: data.password,
+    portal: 'patient',
     redirect: false,
   });
 

@@ -20,21 +20,13 @@ ENV NODE_ENV=production
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-# Copy runtime files from builder
-COPY --from=builder /app/package.json ./package.json
-COPY --from=builder /app/package-lock.json* ./package-lock.json
-COPY --from=builder /app/prisma ./prisma
-
-# Install production deps AFTER prisma schema is present so the
-# @prisma/client postinstall can generate the client.
-RUN npm ci --omit=dev && npx prisma generate
-
 COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/next.config.mjs ./
-COPY --from=builder /app/tsconfig.json ./
+COPY --from=builder /app/package.json package.json ./
+COPY --from=builder /app/tsconfig.json tsconfig.json ./
+COPY --from=builder /app/prisma ./prisma
 
 USER appuser
 
 EXPOSE 3000
 
-CMD ["npm", "run", "start"]
+CMD ["node", "server.js"]
