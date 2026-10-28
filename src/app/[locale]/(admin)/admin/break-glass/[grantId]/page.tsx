@@ -51,7 +51,7 @@ export default async function BreakGlassSnapshotPage({
             <h3 className="mb-2 mt-4 text-sm font-semibold uppercase text-gray-500">{ar ? 'الملاحظات' : 'Notes'}</h3>
             {link.notes.map((note) => <article key={note.id} className="mb-2 whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm">{note.content}</article>)}
             <h3 className="mb-2 mt-4 text-sm font-semibold uppercase text-gray-500">{ar ? 'الرسائل' : 'Messages'}</h3>
-            {link.threads.flatMap((thread) => thread.messages).map((message) => <article key={message.id} className="mb-2 whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm">{message.body}</article>)}
+            {link.threads.flatMap((thread) => thread.messages).map((message) => <article key={message.id} className="mb-2 whitespace-pre-wrap rounded bg-gray-50 p-3 text-sm">{message.body ?? (ar ? 'رسالة مشفرة من طرف إلى طرف — لا يمكن للإدارة قراءتها.' : 'Message E2EE — contenu inaccessible à l’administration.')}</article>)}
             <h3 className="mb-2 mt-4 text-sm font-semibold uppercase text-gray-500">{ar ? 'الوثائق' : 'Documents'}</h3>
             {link.documents.map((document) => <p key={document.id} className="text-sm">{document.type} · {document.status} · {document.issuedAt.toLocaleDateString(locale)}</p>)}
           </div>

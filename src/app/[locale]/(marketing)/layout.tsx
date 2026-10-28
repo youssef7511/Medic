@@ -1,45 +1,28 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
+import { Info } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { PublicAuthNav } from '@/components/PublicAuthNav';
 import { Brand } from '@/components/Brand';
 
-// Public shell (§4). Everything under here is indexable and needs no auth (§13.3).
-export default async function MarketingLayout({
-  children,
-  params,
-}: {
-  children: React.ReactNode;
-  params: Promise<{ locale: string }>;
-}) {
+export default async function MarketingLayout({ children, params }: { children: React.ReactNode; params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations();
-
-  return (
-    <div className="min-h-screen bg-white text-slate-900">
-      <header className="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
-        <div className="mx-auto flex h-[72px] max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-          <Brand />
-          <nav className="flex items-center gap-3 sm:gap-5">
-            <Link href="/" className="hidden text-sm font-medium text-slate-600 hover:text-brand-700 md:block">
-              {locale === 'ar' ? 'الرئيسية' : 'Accueil'}
-            </Link>
-            <Link href="/doctors" className="hidden text-sm font-medium text-slate-600 hover:text-brand-700 sm:block">
-              {t('nav.doctors')}
-            </Link>
-            <LocaleSwitcher />
-            <PublicAuthNav />
-          </nav>
-        </div>
-      </header>
-      <main>{children}</main>
-      <footer className="border-t border-slate-200 bg-slate-50">
-        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-8 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-          <Brand compact />
-          <p>{t('safety.notForEmergencies')}</p>
-        </div>
-      </footer>
-    </div>
-  );
+  const ar = locale === 'ar';
+  return <div className="public-site">
+    <a className="public-skip-link" href="#public-main">{ar ? 'الانتقال إلى المحتوى' : 'Aller au contenu'}</a>
+    <header className="public-header"><div className="public-header-inner">
+      <Brand className="public-brand" />
+      <nav className="public-main-nav" aria-label={ar ? 'التنقل الرئيسي' : 'Navigation principale'}><Link href="/doctors">{t('nav.doctors')}</Link><Link href="/#comment-ca-marche">{ar ? 'كيف يعمل Medic' : 'Comment ça marche'}</Link></nav>
+      <LocaleSwitcher />
+      <PublicAuthNav />
+    </div></header>
+    <main id="public-main">{children}</main>
+    <footer className="public-footer"><div className="editorial-container public-footer-inner">
+      <div><Brand className="public-brand" /><p className="public-footer-tagline">{ar ? 'صحة أقرب إليك.' : 'Une santé plus proche de vous.'}</p></div>
+      <nav aria-label={ar ? 'روابط مفيدة' : 'Liens utiles'}><Link href="/doctors">{t('nav.doctors')}</Link><Link href="/#comment-ca-marche">{ar ? 'كيف يعمل Medic' : 'Comment ça marche'}</Link><Link href="/login/doctor">{ar ? 'فضاء الطبيب' : 'Espace médecin'}</Link></nav>
+      <p className="public-footer-safety"><Info aria-hidden="true" />{t('safety.notForEmergencies')}</p>
+    </div></footer>
+  </div>;
 }

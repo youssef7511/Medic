@@ -1,3 +1,4 @@
+import { DateTime } from 'luxon';
 import { redirect } from 'next/navigation';
 import { getCurrentActor } from '@/lib/auth/session';
 import { hasPermission } from '@/lib/rbac/guard';
@@ -11,10 +12,11 @@ export default async function CalendarPage({
   searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ week?: string }>;
+  searchParams: Promise<{ week?: string; view?: string }>;
 }) {
   const { locale } = await params;
-  const { week } = await searchParams;
+  const { week, view: requestedView } = await searchParams;
+  const view = requestedView === 'week' ? 'week' : 'month';
 
   const actor = await getCurrentActor();
   if (!actor) redirect(`/${locale}/login`);
@@ -24,16 +26,16 @@ export default async function CalendarPage({
 
   // Accept only YYYY-MM-DD — an unvalidated param becomes an invalid Date and
   // silently renders an empty week.
-  const valid = week && /^\d{4}-\d{2}-\d{2}$/.test(week) ? week : null;
+  const valid = week && /^\d{4}-\d{2}-\d{2}$/.test(week) && DateTime.fromISO(week).isValid ? week : null;
   const anchor = valid ? new Date(`${valid}T12:00:00Z`) : new Date();
   const weekParam = anchor.toISOString().slice(0, 10);
 
-  const calendar = await getWeekCalendar({ userId: actor.userId, anchor, locale });
+  const calendar = await getWeekCalendar({ userId: actor.userId, anchor, locale, view });
 
   if (!calendar) {
     return (
       <section>
-        <h1 className="text-2xl font-bold">{locale === 'ar' ? 'التقويم' : 'Agenda'}</h1>
+        <h1 className="text-2xl font-bold">{locale === 'ar' ? 'التقويم' : 'Calendrier'}</h1>
         <p className="mt-4 text-gray-500">
           {locale === 'ar'
             ? 'هذا الحساب غير مرتبط بملف طبيب.'
@@ -45,8 +47,8 @@ export default async function CalendarPage({
 
   return (
     <section>
-      <div className="mb-6"><p className="medic-kicker">{locale === 'ar' ? 'إدارة الوقت' : 'Organisation du cabinet'}</p><h1 className="medic-page-title mt-2">{locale === 'ar' ? 'التقويم' : 'Agenda'}</h1><p className="mt-2 text-sm text-slate-500">{locale === 'ar' ? 'راجع مواعيد الأسبوع وساعات العمل.' : 'Consultez les rendez-vous et les plages de disponibilité de la semaine.'}</p></div>
-      <div className="medic-card p-4 sm:p-5"><CalendarClient calendar={calendar} weekParam={weekParam} locale={locale} /></div>
+      <div className="mb-6"><p className="medic-kicker">{locale === 'ar' ? 'إدارة الوقت' : 'Organisation du cabinet'}</p><h1 className="medic-page-title mt-2">{locale === 'ar' ? 'التقويم' : 'Calendrier'}</h1><p className="mt-2 text-sm text-slate-500">{locale === 'ar' ? 'راجع مواعيد الأسبوع وساعات العمل.' : 'Votre planning, vos patients et vos rendez-vous en un coup d’œil.'}</p></div>
+      <div className="medic-card p-4 sm:p-5"><CalendarClient calendar={calendar} weekParam={weekParam} locale={locale} view={view} /></div>
     </section>
   );
 }

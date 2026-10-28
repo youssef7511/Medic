@@ -33,7 +33,7 @@ export default async function DoctorSchedulePage({
     getDoctorAppointments(actor.userId, locale),
     prisma.doctorProfile.findUnique({
       where: { userId: actor.userId },
-      select: { headline: true, timezone: true, _count: { select: { links: true } } },
+      select: { headline: true, timezone: true, _count: { select: { links: { where: { status: 'ACTIVE' } } } } },
     }),
   ]);
 
@@ -43,7 +43,7 @@ export default async function DoctorSchedulePage({
   const dateKey = (date: Date) => new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(date);
   const todayKey = dateKey(new Date());
   const today = appointments.filter((item) => dateKey(new Date(item.startAtIso)) === todayKey);
-  const nextAppointments = appointments.filter((item) => !item.isPast && item.status !== 'CANCELLED').slice(0, 6);
+  const nextAppointments = appointments.filter((item) => !item.isPast && ['REQUESTED', 'CONFIRMED'].includes(item.status)).sort((a, b) => a.startAtIso.localeCompare(b.startAtIso)).slice(0, 6);
   const displayName = (profile?.headline as Record<Locale, string> | undefined)?.[locale as Locale] ?? (ar ? 'طبيب' : 'Docteur');
 
   return (
@@ -99,6 +99,7 @@ export default async function DoctorSchedulePage({
             <h2 className="text-base font-bold text-navy-950">{ar ? 'إجراءات سريعة' : 'Actions rapides'}</h2>
             <div className="mt-3 divide-y divide-slate-100">
               <Action href="/d/calendar" icon={CalendarDays} label={ar ? 'إدارة التقويم' : 'Gérer l’agenda'} />
+              <Action href="/d/patients" icon={Users} label={ar ? 'مرضاي' : 'Mes patients'} />
               <Action href="/d/availability" icon={Settings2} label={ar ? 'تعديل التوفر' : 'Modifier les disponibilités'} />
               <Action href="/d/threads" icon={MessageSquare} label={ar ? 'فتح الرسائل' : 'Ouvrir les conversations'} />
             </div>

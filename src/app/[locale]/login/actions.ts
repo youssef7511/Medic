@@ -16,8 +16,10 @@ export type AuthFormState = {
   error?:
     | 'invalid'
     | 'mfa_required'
+    | 'mfa_invalid'
     | 'mfa_enrollment_required'
     | 'account_suspended'
+    | 'account_locked'
     | 'registration_disabled';
   email?: string;
 };
@@ -51,10 +53,12 @@ export async function loginAction(
     // failure — we never distinguish "no such user" from "wrong password".
     const code = (e as { code?: string })?.code;
     if (code === 'mfa_required') return { error: 'mfa_required', email: parsed.data.email };
+    if (code === 'mfa_invalid') return { error: 'mfa_invalid', email: parsed.data.email };
     if (code === 'mfa_enrollment_required') {
       return { error: 'mfa_enrollment_required', email: parsed.data.email };
     }
     if (code === 'account_suspended') return { error: 'account_suspended' };
+    if (code === 'account_locked') return { error: 'account_locked' };
     return { error: 'invalid', email: parsed.data.email };
   }
 

@@ -29,6 +29,7 @@ export default async function DoctorDocumentsPage({
   }
 
   const rows: DocumentRow[] = docs.map((d) => ({
+    title: d.title, uploadedByPatient: d.uploadedByPatient, uploadCategory: d.uploadCategory,
     id: d.id,
     type: d.type,
     status: d.status,
@@ -54,7 +55,7 @@ export default async function DoctorDocumentsPage({
         documents={rows}
         locale={locale}
         actions={(doc) =>
-          doc.status === 'ACTIVE' ? (
+          doc.status === 'ACTIVE' && !doc.uploadedByPatient ? (
             <RevokeDocumentButton linkId={linkId} documentId={doc.id} />
           ) : null
         }

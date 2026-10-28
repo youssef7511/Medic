@@ -21,7 +21,8 @@ export default async function DoctorLayout({
 
   const nav = [
     { href: '/d', label: ar ? 'لوحة التحكم' : 'Tableau de bord', icon: 'dashboard' as const },
-    { href: '/d/calendar', label: ar ? 'التقويم' : 'Agenda', icon: 'calendar' as const },
+    { href: '/d/calendar', label: ar ? 'التقويم' : 'Calendrier', icon: 'calendar' as const },
+    { href: '/d/patients', label: ar ? 'المرضى' : 'Patients', icon: 'users' as const },
     { href: '/d/availability', label: ar ? 'ساعات العمل' : 'Disponibilités', icon: 'availability' as const },
     { href: '/d/threads', label: ar ? 'المحادثات' : 'Conversations', icon: 'messages' as const },
     { href: '/d/shared-documents', label: ar ? 'مستندات مشتركة' : 'Documents partagés', icon: 'documents' as const },

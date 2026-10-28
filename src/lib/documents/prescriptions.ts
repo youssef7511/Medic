@@ -3,7 +3,7 @@ import { DocumentStatus, DocumentType, Role } from '@prisma/client';
 import { prisma } from '@/lib/db';
 import { audit } from '@/lib/audit';
 import { createHash } from 'node:crypto';
-import { encryptText, decryptText, encryptOptional } from '@/lib/crypto/envelope';
+import { decryptBytes, encryptText, decryptText, encryptOptional } from '@/lib/crypto/envelope';
 import { requireLink, requireLinkAny, requireLinkOrShare, ResourceNotFoundError, type Actor } from '@/lib/rbac/guard';
 import { getObjectStore, newObjectKey } from '@/lib/storage';
 import { readAllergyState, type AllergyState } from '@/lib/clinical/allergies';
@@ -24,6 +24,9 @@ export class DocumentValidationError extends Error {
 }
 
 export interface DocumentView {
+  title?: string;
+  uploadedByPatient?: boolean;
+  uploadCategory?: string;
   id: string;
   type: DocumentType;
   status: 'ACTIVE' | 'SUPERSEDED' | 'REVOKED';
@@ -48,6 +51,7 @@ function summarize(meds: MedicationLine[]): string {
 }
 
 type DocWithRels = {
+  uploadMetadataEnc?: Uint8Array | null;
   id: string;
   type: DocumentType;
   status: DocumentStatus;
@@ -66,7 +70,9 @@ async function toView(doc: DocWithRels, locale: string): Promise<DocumentView> {
   const meds = doc.prescription
     ? (JSON.parse(await decryptText(doc.prescription.medicationsEnc)) as MedicationLine[])
     : [];
+  const upload = doc.uploadMetadataEnc ? JSON.parse(await decryptText(doc.uploadMetadataEnc)) as { title: string; category: string } : null;
   return {
+    title: upload?.title, uploadedByPatient: Boolean(upload), uploadCategory: upload?.category,
     id: doc.id,
     type: doc.type,
     status: doc.status,
@@ -332,7 +338,7 @@ export async function getDocumentForDownload(
     metadata: auth.via === 'share' ? { via: 'share', shareId: auth.shareId } : undefined,
   });
 
-  return { meta: await toView(doc, 'fr'), bytes: stored.body, contentType: doc.contentType };
+  return { meta: await toView(doc, 'fr'), bytes: doc.uploadMetadataEnc ? await decryptBytes(stored.body) : stored.body, contentType: doc.contentType };
 }
 
 /** The document timeline for one link. Audited once per view (like the journal). */
@@ -376,7 +382,7 @@ async function loadOwnedDocument(
       link: { select: { ...VIEW_INCLUDE.link.select, id: true, patientId: true, doctorId: true } },
     },
   });
-  if (!doc) throw new ResourceNotFoundError();
+  if (!doc || doc.issuedByUserId !== actor.userId) throw new ResourceNotFoundError();
   await requireLink(actor, doc.linkId, permission);
   return doc;
 }

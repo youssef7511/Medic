@@ -234,7 +234,9 @@ export async function listSharedDocuments(
       ? (JSON.parse(await decryptText(doc.prescription.medicationsEnc)) as MedicationLine[])
       : [];
 
+    const upload = doc.uploadMetadataEnc ? JSON.parse(await decryptText(doc.uploadMetadataEnc)) as { title: string; category: string } : null;
     return {
+      title: upload?.title, uploadedByPatient: Boolean(upload), uploadCategory: upload?.category,
       id: doc.id,
       type: doc.type,
       status: doc.status,

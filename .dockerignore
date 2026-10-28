@@ -12,3 +12,6 @@ npm-debug.log
 **/*.spec.ts
 **/*.test.tsx
 **/*.spec.tsx
+# Local browser fixtures and screenshots are not application assets.
+.playwright-cli
+landing-page-prototypes

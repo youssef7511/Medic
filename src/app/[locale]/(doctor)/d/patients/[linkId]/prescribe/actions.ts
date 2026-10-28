@@ -63,6 +63,10 @@ export async function issuePrescriptionAction(
       locale,
     });
     revalidatePath(`/d/patients/${linkId}/documents`);
+    revalidatePath('/[locale]/d/patients/[linkId]/documents', 'page');
+    revalidatePath('/[locale]/p/doctors/[doctorId]/documents', 'page');
+    revalidatePath('/[locale]/p/documents', 'page');
+    revalidatePath('/[locale]/p', 'page');
     return { ok: true, documentId: doc.id };
   } catch (e) {
     if (e instanceof ResourceNotFoundError) return { error: 'Not found.' };
@@ -92,6 +96,10 @@ export async function revokeDocumentAction(
   try {
     await revokeDocument(actor, { documentId, reason, locale });
     revalidatePath(`/d/patients/${linkId}/documents`);
+    revalidatePath('/[locale]/d/patients/[linkId]/documents', 'page');
+    revalidatePath('/[locale]/p/doctors/[doctorId]/documents', 'page');
+    revalidatePath('/[locale]/p/documents', 'page');
+    revalidatePath('/[locale]/p', 'page');
     return { ok: true };
   } catch (e) {
     if (e instanceof ResourceNotFoundError) return { error: 'Not found.' };

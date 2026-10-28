@@ -5,16 +5,9 @@
  * jurisdiction is decided. Keep this file seeding fictional data exclusively.
  */
 import { PrismaClient } from '@prisma/client';
+import { STANDARD_SPECIALTIES as SPECIALTIES } from '../src/lib/doctors/specialties';
 
 const prisma = new PrismaClient();
-
-const SPECIALTIES = [
-  { slug: 'general-medicine', name: { fr: 'Médecine générale', ar: 'الطب العام' } },
-  { slug: 'cardiology', name: { fr: 'Cardiologie', ar: 'أمراض القلب' } },
-  { slug: 'dermatology', name: { fr: 'Dermatologie', ar: 'الأمراض الجلدية' } },
-  { slug: 'pediatrics', name: { fr: 'Pédiatrie', ar: 'طب الأطفال' } },
-  { slug: 'gynecology', name: { fr: 'Gynécologie', ar: 'أمراض النساء' } },
-];
 
 async function main() {
   for (const s of SPECIALTIES) {

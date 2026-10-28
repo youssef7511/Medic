@@ -1,17 +1,15 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useLocale } from 'next-intl';
 import { Link } from '@/i18n/navigation';
 import { SignOutButton } from '@/components/SignOutButton';
 
 /**
  * Auth-aware corner of the public header.
  *
- * Resolved on the client on purpose: the landing page is statically generated
- * for SEO (§4), and baking a personalised header into cached HTML would serve
- * one visitor's state to everyone. So the page stays cacheable and only this
- * fragment varies.
+ * Resolved on the client so public content stays independent of session state.
+ * Personalized controls never get baked into a shared public-page response.
  *
  * The destination is `/go` rather than a hard-coded space, so the server picks
  * the right one from the visitor's roles — no roles in the token, nothing to go
@@ -19,7 +17,6 @@ import { SignOutButton } from '@/components/SignOutButton';
  */
 export function PublicAuthNav() {
   const locale = useLocale();
-  const t = useTranslations();
   const [state, setState] = useState<'loading' | 'in' | 'out'>('loading');
 
   useEffect(() => {
@@ -38,14 +35,14 @@ export function PublicAuthNav() {
   }, []);
 
   // Reserve the space so the header doesn't jump when this resolves.
-  if (state === 'loading') return <span className="inline-block h-8 w-24" aria-hidden />;
+  if (state === 'loading') return <div className="public-auth public-auth-loading" aria-hidden><span /><span /></div>;
 
   if (state === 'in') {
     return (
-      <div className="flex items-center gap-3">
+      <div className="public-auth">
         <a
           href={`/${locale}/go`}
-          className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-brand-700"
+          className="editorial-button"
         >
           {locale === 'ar' ? 'فضائي' : 'Mon espace'}
         </a>
@@ -55,11 +52,9 @@ export function PublicAuthNav() {
   }
 
   return (
-    <Link
-      href="/login"
-      className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-navy-950 hover:border-brand-400 hover:bg-brand-50"
-    >
-      {t('common.login')}
-    </Link>
+    <div className="public-auth">
+      <Link href="/login/doctor" className="editorial-button editorial-button-outline">{locale === 'ar' ? 'فضاء الطبيب' : 'Espace médecin'}</Link>
+      <Link href="/login/patient" className="editorial-button">{locale === 'ar' ? 'فضاء المريض' : 'Espace patient'}</Link>
+    </div>
   );
 }

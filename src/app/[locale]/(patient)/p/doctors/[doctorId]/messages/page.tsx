@@ -3,6 +3,7 @@ import { getCurrentActor } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { listPatientThreads } from '@/lib/messaging/threads';
 import { Link } from '@/i18n/navigation';
+import { StartConversationButton } from '@/components/StartConversationButton';
 import { ArrowRight, MessageSquare, ShieldCheck } from 'lucide-react';
 
 export const dynamic = 'force-dynamic';
@@ -46,6 +47,7 @@ export default async function PatientMessagesPage({
     <section>
       <div><p className="medic-kicker">{ar ? 'تواصل آمن' : 'Communication sécurisée'}</p><h1 className="medic-page-title mt-2">{ar ? 'الرسائل' : 'Messages'}</h1><p className="mt-2 text-sm text-slate-500">{ar ? 'تواصل مع فريق الرعاية خارج حالات الطوارئ.' : 'Échangez avec votre équipe de soin hors situations d’urgence.'}</p></div>
 
+      <StartConversationButton linkId={link.id} basePath={`/p/doctors/${doctorId}/messages`} locale={locale} />
       {threads.length === 0 ? (
         <div className="medic-panel mt-6 p-10 text-center">
           <MessageSquare className="mx-auto h-12 w-12 text-slate-300" />

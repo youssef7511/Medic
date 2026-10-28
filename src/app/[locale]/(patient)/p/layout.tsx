@@ -19,6 +19,8 @@ export default async function PatientLayout({
   const nav = [
     { href: '/p', label: locale === 'ar' ? 'الرئيسية' : 'Accueil', icon: 'dashboard' as const },
     { href: '/p/appointments', label: t('nav.myAppointments'), icon: 'calendar' as const },
+    { href: '/p/messages', label: locale === 'ar' ? 'الرسائل' : 'Messages', icon: 'messages' as const },
+    { href: '/p/documents', label: locale === 'ar' ? 'مستنداتي' : 'Mes documents', icon: 'documents' as const },
     { href: '/p/allergies', label: locale === 'ar' ? 'الحساسيات' : 'Allergies', icon: 'allergies' as const },
   ];
 

@@ -5,6 +5,7 @@ import { hasPermission, requireLink, ResourceNotFoundError } from '@/lib/rbac/gu
 import { prisma } from '@/lib/db';
 import { readAllergyState } from '@/lib/clinical/allergies';
 import { audit } from '@/lib/audit';
+import { StartConversationButton } from '@/components/StartConversationButton';
 import { AllergyPanel } from '@/components/AllergyPanel';
 import { AppointmentStatusBadge } from '@/components/AppointmentStatusBadge';
 import { DocumentList, type DocumentRow } from '@/components/DocumentList';
@@ -337,6 +338,7 @@ export default async function DoctorPatientPage({
             <DocumentList documents={docRows} locale={locale} />
           </section>
 
+          <StartConversationButton linkId={linkId} basePath="/d/threads" locale={locale} />
           {/* ── Quick actions ────────────────────────────────────────────── */}
           <section className="flex flex-wrap gap-3 rounded-2xl bg-slate-100 p-3">
             <Link

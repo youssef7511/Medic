@@ -11,8 +11,9 @@ if ! command -v docker compose &> /dev/null; then
     fi
 fi
 
-# Pull images and start services
-docker compose up -d --build
+# Pull images and start services (env file is required to wire DATABASE_URL,
+# AUTH_SECRET and the other runtime secrets into the containers).
+docker compose --env-file .env.docker up -d --build
 
 echo "Services started:"
 echo "  - App: http://localhost:3000"

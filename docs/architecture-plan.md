@@ -493,7 +493,9 @@ Not realtime. Don't reach for WebSockets.
 - Per-doctor response SLA shown to the patient, so expectations are set.
 - Attachments to private object storage, signed URLs, scanned on upload, MIME-sniffed rather than trusting the extension.
 - **A hard, unmissable banner: this is not for emergencies.** Both in the UI and in the doctor's onboarding terms. This is a real clinical-safety and liability issue, not decoration.
-- Message bodies are envelope-encrypted like notes.
+- Historical message bodies remain envelope-encrypted like notes. New chat text
+  uses browser-side E2EE with signed OpenPGP messages, protected recovery files
+  and participant fingerprint verification; see [the current messaging design](messaging-e2ee.md).
 
 ---
 
@@ -550,7 +552,7 @@ Resolve before Phase 7. Needs local counsel in the target country — this is no
 
 ### Everything else
 
-- **Encryption at rest** on the database, plus **app-layer envelope encryption** for notes, messages, reason-for-visit, and allergies (§3.1). Keys in a KMS, per-record data keys. A stolen database dump is then still opaque. Note that data minimization *raises* the value of this rather than lowering it — everything we store is the sensitive part.
+- **Encryption at rest** on the database, plus **app-layer envelope encryption** for notes, historical messages, reason-for-visit, and allergies (§3.1). Keys in a KMS, per-record data keys. A stolen database dump is then still opaque. Note that data minimization *raises* the value of this rather than lowering it — everything we store is the sensitive part.
 - **TLS 1.3**, HSTS, a real CSP, secure cookie flags.
 - **Mandatory 2FA (TOTP) for `DOCTOR`, `DOCTOR_STAFF`, and all admin roles.** Optional for patients.
 - **Sessions:** short-lived JWT access token + rotating refresh token in an httpOnly cookie. Server-side revocation list so suspending an account is immediate rather than eventual.

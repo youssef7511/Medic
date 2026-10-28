@@ -26,7 +26,7 @@ next-intl (fr + **ar/RTL**) · Tailwind · pg-boss (jobs).
 
 ## Status — Phases 0–6 complete; Phase 7 security hardening in progress
 
-Built, tested, and building clean (116 unit + 62 end-to-end):
+Verification includes unit tests plus local database and browser scenarios:
 
 - **Data model** — full Prisma schema (§3) + hardening SQL (no-overlap
   exclusion constraint, RLS policies) in
@@ -39,6 +39,9 @@ Built, tested, and building clean (116 unit + 62 end-to-end):
 - **Encryption** (§3.1) — AES-256-GCM envelope encryption with per-record data
   keys, AWS KMS wrap/unwrap in production, backward-compatible v1 reads and a
   restartable rewrap migration
+- **Messaging E2EE** — signed, browser-encrypted new chat messages, protected
+  recovery files and verified participant fingerprints; legacy history remains
+  server-encrypted. See [the design and limits](docs/messaging-e2ee.md).
 - **Booking engine** (§6) — computed (never materialised) availability:
   rules − exceptions − booked − lead time − horizon, IANA-timezone correct
   incl. the Morocco DST trap (16 tests); booking transaction with link
@@ -84,6 +87,28 @@ Remaining Phase 7 operational/legal work:
 - Real fonts (system fallbacks, `src/app/globals.css` §9)
 - Doctor calendar/availability editor (Phase 3), clinical/documents (Phase 4),
   messaging (Phase 5), admin (Phase 6)
+
+### Patient document exchange
+
+Patients can open **Mes documents → Envoyer un document à mon médecin**, select
+an active care relationship, and send a PDF, JPG or PNG up to 10 MiB. Categories
+include laboratory results, MRI reports, imaging and other medical documents.
+Uploaded files and their titles are encrypted; the selected doctor finds them
+in the patient's document timeline. Doctor-issued prescriptions appear in the
+patient's timeline with separate **Lire** and **Télécharger** actions.
+
+Apply migrations and configure the persistent `STORAGE_*` backend before using
+uploads. The browser regression test creates unique fictional accounts, books
+an appointment, uploads a report, issues a prescription, checks both parties'
+reads and isolation, and cleans up its own database rows and storage objects:
+
+```bash
+BASE_URL=http://localhost:3000 npm run e2e:patient-documents
+```
+
+Use the same database, encryption and storage settings as the running local
+app. Install Chromium with `npx playwright install chromium` if necessary, or
+set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` to an existing Chromium executable.
 
 ### Running the worker
 
@@ -169,6 +194,32 @@ or bake them into the image. Production clinical encryption additionally needs
 `KMS_PROVIDER=aws`, `KMS_KEY_ID` and `AWS_REGION`; real SMS delivery needs the
 Twilio or HTTP-provider variables documented in
 `docs/phase7-security-runbook.md`.
+
+## Encrypted messaging
+
+New doctor–patient chat messages use browser-side E2EE. Historical messages stay
+readable and carry a separate server-encryption label. Medical documents retain
+their existing document encryption; this change covers chat text.
+
+In a conversation, both participants activate messaging with a separate secret
+phrase, keep the downloaded protected recovery file, and compare fingerprints
+by phone or another trusted channel. A new browser needs that file and phrase.
+Account-password reset cannot recover the messaging key.
+
+After applying database migrations, protect any historical plaintext subject
+copies once with `npm run e2ee:protect-subjects`. This restartable command keeps
+subjects encrypted and leaves message history intact. Run it with the same
+clinical encryption configuration as the app, after stopping old app versions.
+
+`npm run e2e:messaging` checks separate doctor/patient browsers, recovery, legacy
+history, ciphertext storage, and access isolation against a local running app
+(`BASE_URL`, default `http://localhost:3100`). It creates fictional accounts and
+removes its own database fixtures. Install Playwright Chromium first, or set
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE` to a local Chromium executable.
+
+See [the E2EE design](docs/messaging-e2ee.md) for the trust model and limitations:
+this initial account-key design has no Signal-style forward secrecy or key
+rotation and has not undergone an independent security audit.
 
 ## Scripts
 

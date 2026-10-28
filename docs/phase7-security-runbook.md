@@ -45,7 +45,10 @@ CONFIRM_KMS_REWRAP=phase7 npm run crypto:rewrap
 ```
 
 The job is restartable and updates only v1 blobs. Verify that it reports zero
-rows on a second run. Exercise notes, messages, allergies and prescription
+rows on a second run. New `openpgp-v1` chat messages are excluded from clinical
+key rewrapping; historical `server-v1` message bodies and protected thread
+subjects still use the clinical encryption keys. See [messaging E2EE](messaging-e2ee.md).
+Exercise notes, legacy messages, allergies and prescription
 downloads before removing `ENCRYPTION_MASTER_KEY` in a later deployment. Never
 remove the legacy key before backup restore and data-read verification.
 
@@ -94,6 +97,8 @@ urgent support or safety incident.
    delivery during the incident review.
 
 SUPER_ADMIN still has no standing `note:read` or clinical-message permission.
+Break-glass cannot decrypt E2EE messages. It shows an unavailable marker for
+those messages and retains access to permitted historical server-encrypted content.
 
 ## 6. Backup restore drill
 
@@ -102,7 +107,10 @@ snapshot into an isolated account/region approved for test data. Use a copied
 KMS grant scoped to the restored environment. Verify:
 
 - schema migrations and row counts;
-- one v2 note/message/allergy decrypt per fixture patient;
+- one v2 note/legacy-message/allergy decrypt per fixture patient;
+- E2EE ciphertext and public identity continuity, then fixture-browser recovery
+  using a fictional protected recovery file and its separate phrase (database
+  backups and KMS grants alone cannot decrypt E2EE content);
 - document checksum and PDF download;
 - audit continuity and append-only grants;
 - login, MFA, session revocation and one outbox dispatch with a fake SMS target.

@@ -33,6 +33,10 @@ function toPrismaBytes(value: Uint8Array): Uint8Array<ArrayBuffer> {
 }
 
 export async function encryptText(plaintext: string): Promise<Uint8Array<ArrayBuffer>> {
+  return encryptBytes(Buffer.from(plaintext, 'utf8'));
+}
+
+export async function encryptBytes(plaintext: Uint8Array): Promise<Uint8Array<ArrayBuffer>> {
   const dataKey = randomBytes(KEY_LEN);
   try {
     const wrappedKey = Buffer.from(await getKeyProvider().wrapKey(dataKey));
@@ -45,7 +49,7 @@ export async function encryptText(plaintext: string): Promise<Uint8Array<ArrayBu
     const iv = randomBytes(IV_LEN);
     const cipher = createCipheriv(ALGO, dataKey, iv);
     cipher.setAAD(Buffer.concat([header, wrappedKey]));
-    const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const ciphertext = Buffer.concat([cipher.update(plaintext), cipher.final()]);
 
     return toPrismaBytes(
       Buffer.concat([header, iv, cipher.getAuthTag(), wrappedKey, ciphertext]),
@@ -56,6 +60,10 @@ export async function encryptText(plaintext: string): Promise<Uint8Array<ArrayBu
 }
 
 export async function decryptText(blob: Buffer | Uint8Array): Promise<string> {
+  return Buffer.from(await decryptBytes(blob)).toString('utf8');
+}
+
+export async function decryptBytes(blob: Buffer | Uint8Array): Promise<Uint8Array> {
   const buf = Buffer.isBuffer(blob) ? blob : Buffer.from(blob);
   if (buf.length < 1) throw new Error('Ciphertext too short / corrupt.');
   if (buf[0] === VERSION_V1) return decryptLegacyV1(buf);
@@ -85,7 +93,7 @@ export async function decryptText(blob: Buffer | Uint8Array): Promise<string> {
     const decipher = createDecipheriv(ALGO, dataKey, iv);
     decipher.setAAD(Buffer.concat([header, wrappedKey]));
     decipher.setAuthTag(tag);
-    return Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8');
+    return Buffer.concat([decipher.update(ciphertext), decipher.final()]);
   } finally {
     dataKey.fill(0);
   }
@@ -110,7 +118,7 @@ function legacyMasterKey(): Buffer {
   return key;
 }
 
-function decryptLegacyV1(buf: Buffer): string {
+function decryptLegacyV1(buf: Buffer): Uint8Array {
   const offWrapIv = 1;
   const offWrapTag = offWrapIv + IV_LEN;
   const offWrappedKey = offWrapTag + TAG_LEN;
@@ -132,7 +140,7 @@ function decryptLegacyV1(buf: Buffer): string {
     return Buffer.concat([
       decipher.update(buf.subarray(offCiphertext)),
       decipher.final(),
-    ]).toString('utf8');
+    ]);
   } finally {
     dataKey.fill(0);
   }

@@ -1,9 +1,13 @@
+import localFont from 'next/font/local';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, setRequestLocale } from 'next-intl/server';
 import { locales, localeDirection, isLocale, type Locale } from '@/i18n/config';
 import '../globals.css';
+
+const latin = localFont({ src: '../../lib/documents/pdf/fonts/NotoSans-Static.ttf', variable: '--font-medic-latin', display: 'swap' });
+const arabic = localFont({ src: '../../lib/documents/pdf/fonts/NotoSansArabic-Static.ttf', variable: '--font-medic-arabic', display: 'swap' });
 
 export const metadata: Metadata = {
   title: 'Medic',
@@ -37,7 +41,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale} dir={dir}>
-      <body>
+      <body className={`${latin.variable} ${arabic.variable}`}>
         <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
       </body>
     </html>

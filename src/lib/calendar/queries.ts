@@ -2,7 +2,7 @@ import { DateTime } from 'luxon';
 import { prisma } from '@/lib/db';
 import type { Locale } from '@/i18n/config';
 import { localeNumberingSystem } from '@/i18n/config';
-import { buildWeek, computeDayBounds, type WeekDay } from './layout';
+import { buildMonth, buildWeek, computeDayBounds, type WeekDay } from './layout';
 
 /**
  * Read model for the doctor's week calendar.
@@ -14,6 +14,7 @@ import { buildWeek, computeDayBounds, type WeekDay } from './layout';
 
 export interface CalendarEvent {
   id: string;
+  linkId: string;
   startAt: Date;
   endAt: Date;
   status: string;
@@ -53,6 +54,7 @@ export async function getWeekCalendar(args: {
   anchor: Date;
   locale: string;
   now?: Date;
+  view?: 'month' | 'week';
 }): Promise<WeekCalendar | null> {
   const { userId, anchor, locale, now = new Date() } = args;
 
@@ -66,9 +68,9 @@ export async function getWeekCalendar(args: {
   const numbering = localeNumberingSystem[locale as Locale] ?? 'latn';
   const intlLocale = `${locale}-u-nu-${numbering}`;
 
-  const days = buildWeek({ anchor, timezone: tz, locale: intlLocale, now });
+  const days = (args.view === 'month' ? buildMonth : buildWeek)({ anchor, timezone: tz, locale: intlLocale, now });
   const firstDay = days[0]!;
-  const lastDay = days[6]!;
+  const lastDay = days[days.length - 1]!;
 
   // Query bounds are the week's edges expressed as real instants in the
   // doctor's zone — not naive UTC midnights, which would clip an hour.
@@ -88,7 +90,7 @@ export async function getWeekCalendar(args: {
         endAt: true,
         status: true,
         clinic: { select: { name: true } },
-        link: { select: { patient: { select: { firstName: true, lastName: true } } } },
+        link: { select: { id: true, patient: { select: { firstName: true, lastName: true } } } },
       },
       orderBy: { startAt: 'asc' },
     }),
@@ -103,6 +105,7 @@ export async function getWeekCalendar(args: {
 
   const events: CalendarEvent[] = appointments.map((a) => ({
     id: a.id,
+    linkId: a.link.id,
     startAt: a.startAt,
     endAt: a.endAt,
     status: a.status,

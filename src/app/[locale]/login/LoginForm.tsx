@@ -23,13 +23,18 @@ export function LoginForm({ next, portal }: { next?: string; portal: LoginPortal
   const totpRef = useRef<HTMLInputElement>(null);
 
   // Once the server says MFA is needed, the credentials were valid — reveal the
-  // code field. Until then it stays hidden so the form gives nothing away.
-  const needsTotp = state.error === 'mfa_required';
+  // code field. Until then it stays hidden so the form gives nothing away. The
+  // field also stays when a submitted code was rejected (`mfa_invalid`).
+  const needsTotp = state.error === 'mfa_required' || state.error === 'mfa_invalid';
 
-  // Send the cursor straight to the code field when it appears.
+  // Send the cursor straight to the code field when it appears, and clear a
+  // rejected code so the user can enter the fresh one without backspacing.
   useEffect(() => {
-    if (needsTotp) totpRef.current?.focus();
-  }, [needsTotp]);
+    if (needsTotp) {
+      totpRef.current?.focus();
+      if (state.error === 'mfa_invalid') totpRef.current!.value = '';
+    }
+  }, [needsTotp, state.error]);
 
   return (
     <form action={formAction} className="space-y-5">
@@ -101,6 +106,20 @@ export function LoginForm({ next, portal }: { next?: string; portal: LoginPortal
           {locale === 'ar'
             ? 'بيانات الدخول غير صحيحة.'
             : 'Identifiants invalides.'}
+        </p>
+      )}
+      {state.error === 'mfa_invalid' && (
+        <p role="alert" className="text-sm text-red-600">
+          {locale === 'ar'
+            ? 'رمز التحقق غير صالح أو منتهي الصلاحية.'
+            : 'Code de vérification invalide ou expiré.'}
+        </p>
+      )}
+      {state.error === 'account_locked' && (
+        <p role="alert" className="text-sm text-red-600">
+          {locale === 'ar'
+            ? 'محاولات كثيرة. حاول مجددًا لاحقًا.'
+            : 'Trop de tentatives. Réessayez plus tard.'}
         </p>
       )}
       {state.error === 'account_suspended' && (

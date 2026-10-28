@@ -14,10 +14,37 @@
  *   npx tsx .claude/skills/run-medic/fixtures.ts seed
  *   npx tsx .claude/skills/run-medic/fixtures.ts totp     # current doctor code
  *   npx tsx .claude/skills/run-medic/fixtures.ts show     # credentials + state
+ *   npx tsx .claude/skills/run-medic/fixtures.ts unlock   # clear lockouts (dev)
  */
 import { authenticator } from 'otplib';
 import { hash } from 'bcryptjs';
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { PrismaClient, Role, ScopeType, Sex } from '@prisma/client';
+
+// Prisma reads `.env` only, not the compose env file, and the caller should
+// not need to export anything. Load the first available env file without
+// overriding variables the shell already set.
+for (const file of ['.env.docker', '.env', '.env.local']) {
+  const path = resolve(process.cwd(), file);
+  if (!existsSync(path)) continue;
+  for (const raw of readFileSync(path, 'utf8').split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq).trim();
+    if (!process.env[key]) {
+      process.env[key] = line.slice(eq + 1).trim().replace(/^["']|["']$/g, '');
+    }
+  }
+}
+
+// `.env.docker` points at the compose-internal `pg` host, which only resolves
+// inside the Docker network. Host-side scripts must use the published port.
+if (process.env.DATABASE_URL) {
+  process.env.DATABASE_URL = process.env.DATABASE_URL.replace('@pg:', '@localhost:');
+}
 
 const prisma = new PrismaClient();
 
@@ -143,6 +170,18 @@ async function ensureRole(userId: string, role: Role) {
   }
 }
 
+async function unlock() {
+  const res = await prisma.user.updateMany({
+    where: {
+      OR: [{ failedLoginAttempts: { gt: 0 } }, { lockedUntil: { not: null } }],
+    },
+    data: { failedLoginAttempts: 0, lockedUntil: null },
+  });
+  console.log(`\n--- Medic UI fixtures ---`);
+  console.log(`unlocked ${res.count} account(s)`);
+  await show();
+}
+
 async function show() {
   const doctor = await prisma.doctorProfile.findFirst({
     where: { slug: DOCTOR_SLUG },
@@ -166,7 +205,9 @@ const run =
     ? async () => console.log(authenticator.generate(DOCTOR_MFA_SECRET))
     : cmd === 'show'
       ? show
-      : seed;
+      : cmd === 'unlock'
+        ? unlock
+        : seed;
 
 run()
   .catch((e) => {

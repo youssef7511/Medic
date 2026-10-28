@@ -10,9 +10,9 @@ import { Brand } from '@/components/Brand';
 import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { Link } from '@/i18n/navigation';
 import { getCurrentActor } from '@/lib/auth/session';
-import { defaultLandingFor } from '@/lib/auth/redirects';
+import { defaultLandingFor, safeNextPath } from '@/lib/auth/redirects';
 import { getPlatformSettings } from '@/lib/admin/platform-settings-service';
-import type { LoginPortal } from '@/lib/auth/portals';
+import { portalOwnsPath, rolesAllowPortal, type LoginPortal } from '@/lib/auth/portals';
 import { LoginForm } from './LoginForm';
 
 const COPY = {
@@ -70,7 +70,11 @@ export async function LoginPortalShell({
   portal: LoginPortal;
 }) {
   const actor = await getCurrentActor();
-  if (actor) redirect(defaultLandingFor(actor.roles, locale));
+  if (actor) {
+    const fallback = defaultLandingFor(actor.roles, locale);
+    const destination = safeNextPath(next, locale, fallback);
+    redirect(rolesAllowPortal(actor.roles, portal) && portalOwnsPath(portal, destination, locale) ? destination : fallback);
+  }
 
   const settings = await getPlatformSettings();
   const ar = locale === 'ar';

@@ -50,7 +50,7 @@ export default async function SharedDocumentsPage({
                 <FileText className="mt-0.5 h-5 w-5 shrink-0 text-brand-600" />
                 <div>
                   <p className="text-sm font-medium">
-                    {ar ? 'وصفة طبية' : 'Ordonnance'}
+                    {doc.title ?? (doc.type === 'PRESCRIPTION' ? (ar ? 'وصفة طبية' : 'Ordonnance') : (ar ? 'تقرير طبي' : 'Compte rendu médical'))}
                     <span className="ms-2 text-xs text-gray-400">v{doc.version}</span>
                   </p>
                   {doc.medicationSummary && (

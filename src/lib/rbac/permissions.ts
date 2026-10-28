@@ -9,6 +9,7 @@ export const PERMISSIONS = [
   'appointment:book',
   'appointment:cancel:own',
   'document:read:own',
+  'document:upload:own',
   'document:share', // patient shares a doc with another doctor (§2)
   'message:read:own',
   'message:send:own',
@@ -60,6 +61,7 @@ const MATRIX: Record<Role, readonly Permission[]> = {
     'appointment:cancel:own',
     'document:read:own',
     'document:share',
+    'document:upload:own',
     'message:read:own',
     'message:send:own',
     'allergy:write:own',

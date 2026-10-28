@@ -20,6 +20,7 @@ const targets = [
   ['Prescription', 'notesEnc'],
   ['Prescription', 'allergySnapshotEnc'],
   ['Message', 'bodyEnc'],
+  ['MessageThread', 'subjectEnc'],
 ] as const;
 
 interface LegacyRow {

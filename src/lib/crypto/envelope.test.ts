@@ -6,7 +6,7 @@ import { randomBytes } from 'node:crypto';
 // this at the top makes the dependency obvious.
 process.env.ENCRYPTION_MASTER_KEY = randomBytes(32).toString('base64');
 
-const { encryptText, decryptText, encryptOptional } = await import('./envelope');
+const { encryptBytes, decryptBytes, encryptText, decryptText, encryptOptional } = await import('./envelope');
 const { setKeyProviderForTests } = await import('./key-provider');
 import type { KeyProvider } from './key-provider';
 
@@ -83,4 +83,14 @@ test('v2 delegates data-key wrap and unwrap to the configured KMS boundary', asy
   } finally {
     setKeyProviderForTests(undefined);
   }
+});
+
+
+test('binary documents survive encryption without UTF-8 conversion or byte loss', async () => {
+  const bytes = Uint8Array.from({ length: 256 }, (_, index) => index);
+  const encrypted = await encryptBytes(bytes);
+  assert.notDeepEqual(encrypted, bytes);
+  assert.deepEqual(Buffer.from(await decryptBytes(encrypted)), Buffer.from(bytes));
+  flipByte(encrypted, encrypted.length - 1);
+  await assert.rejects(() => decryptBytes(encrypted));
 });

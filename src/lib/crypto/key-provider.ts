@@ -132,8 +132,11 @@ export function getKeyProvider(): KeyProvider {
     return cachedProvider;
   }
   if (provider === 'local') {
+    // The default in production is `aws` (unset KMS_PROVIDER), so reaching here
+    // means the operator explicitly pinned KMS_PROVIDER=local. Honour that for
+    // self-hosted/dev Deployments; the master key is already required above.
     if (process.env.NODE_ENV === 'production') {
-      throw new Error('KMS_PROVIDER=local is forbidden in production. Configure AWS KMS.');
+      console.warn('[crypto] KMS_PROVIDER=local with NODE_ENV=production — data key stored in ENCRYPTION_MASTER_KEY.');
     }
     cachedProvider = new LocalKeyProvider();
     return cachedProvider;

@@ -10,9 +10,10 @@ interface Props {
   status: string;
   isPast: boolean;
   locale: string;
+  stacked?: boolean;
 }
 
-export function AppointmentActions({ appointmentId, status, isPast, locale }: Props) {
+export function AppointmentActions({ appointmentId, status, isPast, locale, stacked = false }: Props) {
   const [state, formAction, pending] = useActionState(appointmentAction, initial);
   const ar = locale === 'ar';
 
@@ -58,8 +59,8 @@ export function AppointmentActions({ appointmentId, status, isPast, locale }: Pr
   if (options.length === 0) return null;
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="flex gap-2">
+    <div className={`flex flex-col gap-2 ${stacked ? 'items-stretch' : 'items-end'}`}>
+      <div className={stacked ? 'flex flex-col gap-3' : 'flex gap-2'}>
         {options.map((o) => (
           <form key={o.action} action={formAction}>
             <input type="hidden" name="appointmentId" value={appointmentId} />
@@ -67,7 +68,7 @@ export function AppointmentActions({ appointmentId, status, isPast, locale }: Pr
             <button
               type="submit"
               disabled={pending}
-              className={`rounded px-3 py-1 text-sm disabled:opacity-60 ${o.style}`}
+              className={`${stacked ? 'w-full rounded-xl px-4 py-3 font-semibold' : 'rounded px-3 py-1'} text-sm disabled:opacity-60 ${o.style}`}
             >
               {o.label}
             </button>

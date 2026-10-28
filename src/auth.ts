@@ -11,14 +11,22 @@ import { LOGIN_PORTALS, rolesAllowPortal } from '@/lib/auth/portals';
 
 // Distinct codes so the UI can ask for a TOTP code without ever revealing
 // whether the email/password pair was valid to an unauthenticated caller.
+// `mfa_required` = code needed for the first time, `mfa_invalid` = a code was
+// supplied but was wrong/expired — only reachable after a valid password.
 export class MfaRequiredError extends CredentialsSignin {
   code = 'mfa_required';
+}
+export class MfaInvalidError extends CredentialsSignin {
+  code = 'mfa_invalid';
 }
 export class MfaEnrollmentRequiredError extends CredentialsSignin {
   code = 'mfa_enrollment_required';
 }
 export class AccountSuspendedError extends CredentialsSignin {
   code = 'account_suspended';
+}
+export class AccountLockedError extends CredentialsSignin {
+  code = 'account_locked';
 }
 
 const credentialsSchema = z.object({
@@ -77,7 +85,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         // Check only after password verification so lock state is not an
         // account-enumeration oracle.
-        if (isLoginLocked(user.lockedUntil)) return null;
+        if (isLoginLocked(user.lockedUntil)) throw new AccountLockedError();
 
         if (user.status !== UserStatus.ACTIVE) throw new AccountSuspendedError();
 
@@ -93,7 +101,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           if (!totp) throw new MfaRequiredError();
           if (!verifyMfaToken(totp, user.mfaSecret)) {
             await recordLoginFailure(user.id);
-            throw new MfaRequiredError();
+            throw new MfaInvalidError();
           }
         }
 

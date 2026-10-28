@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
  * audited at the exact moment the bytes leave. Top-level `/api` (outside
  * `[locale]`) so the next-intl middleware doesn't rewrite it.
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
 
   const actor = await getCurrentActor();
@@ -26,13 +26,16 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     // BodyInit (the SharedArrayBuffer variance snag).
     const body = new Uint8Array(new ArrayBuffer(bytes.length));
     body.set(bytes);
+    const extension = contentType === 'image/png' ? 'png' : contentType === 'image/jpeg' ? 'jpg' : 'pdf';
+    const disposition = new URL(request.url).searchParams.get('download') === '1' ? 'attachment' : 'inline';
+    const filename = `${meta.uploadedByPatient ? 'document' : meta.type === 'PRESCRIPTION' ? 'ordonnance' : 'document'}-v${meta.version}.${extension}`;
     return new Response(body, {
       status: 200,
       headers: {
         'Content-Type': contentType,
         // `inline` so it opens in the viewer; a revoked/superseded doc is still
         // downloadable (it's part of the record) — status is shown in the UI.
-        'Content-Disposition': `inline; filename="ordonnance-v${meta.version}.pdf"`,
+        'Content-Disposition': `${disposition}; filename="${filename}"`,
         'Content-Length': String(bytes.length),
         // Never let a shared cache hold a patient document.
         'Cache-Control': 'private, no-store',

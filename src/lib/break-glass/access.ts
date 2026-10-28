@@ -173,7 +173,7 @@ export async function getBreakGlassSnapshot(actor: Actor, grantId: string) {
               id: true,
               messages: {
                 orderBy: { createdAt: 'asc' },
-                select: { id: true, bodyEnc: true, senderUserId: true, createdAt: true },
+                select: { id: true, bodyEnc: true, encryption: true, senderUserId: true, createdAt: true },
               },
             },
           },
@@ -204,7 +204,8 @@ export async function getBreakGlassSnapshot(actor: Actor, grantId: string) {
           messages: await Promise.all(
             thread.messages.map(async (message) => ({
               id: message.id,
-              body: await decryptText(message.bodyEnc),
+              body: message.encryption === 'server-v1' ? await decryptText(message.bodyEnc) : null,
+              encryption: message.encryption,
               senderUserId: message.senderUserId,
               createdAt: message.createdAt,
             })),

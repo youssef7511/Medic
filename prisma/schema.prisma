@@ -130,6 +130,7 @@ model User {
   createdAt           DateTime   @default(now()) @db.Timestamptz(3)
   updatedAt           DateTime   @updatedAt @db.Timestamptz(3)
 
+  messagingIdentity         MessagingIdentity?
   patientProfile            PatientProfile?
   doctorProfile             DoctorProfile?
   roleAssignments           RoleAssignment[]
@@ -467,6 +468,7 @@ model Document {
   storageKey     String // opaque object key; bytes served via authorized proxy (§4b)
   contentType    String         @default("application/pdf")
   byteSize       Int
+  uploadMetadataEnc Bytes? // encrypted patient-upload title/category; payload encrypted in storage
   checksum       String // sha256 hex of the stored bytes
   version        Int            @default(1)
   supersedesId   String?        @unique // the Document this one replaces (linear chain)
@@ -525,6 +527,7 @@ model DocumentShare {
 model MessageThread {
   id            String    @id @default(cuid())
   linkId        String
+  subjectEnc    Bytes? // encrypted historical subject; never exposed as a plaintext preview
   subject       String?
   lastMessageAt DateTime? @db.Timestamptz(3)
   closedAt      DateTime? @db.Timestamptz(3)
@@ -541,6 +544,7 @@ model Message {
   threadId     String
   senderUserId String
   bodyEnc      Bytes
+  encryption   String    @default("server-v1") // openpgp-v1 payloads are encrypted/signed in the browser
   attachments  Json?
   readAt       DateTime? @db.Timestamptz(3)
   createdAt    DateTime  @default(now()) @db.Timestamptz(3)
@@ -607,4 +611,14 @@ model AuditLog {
   @@index([patientId, createdAt])
   @@index([actorUserId, createdAt])
   @@index([resourceType, resourceId])
+}
+
+/// Only a public certificate is stored here. Private keys and their recovery secrets never reach Medic.
+/// Identity is immutable: another browser must import the existing protected recovery file.
+model MessagingIdentity {
+  userId String @id
+  publicKey String
+  fingerprint String @unique
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

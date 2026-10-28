@@ -2,7 +2,6 @@ import { NextRequest } from 'next/server';
 import { getCurrentActor } from '@/lib/auth/session';
 import { prisma } from '@/lib/db';
 import { hasPermission, requireLink, ResourceNotFoundError } from '@/lib/rbac/guard';
-import { decryptText } from '@/lib/crypto/envelope';
 
 /**
  * SSE endpoint for live message updates (§7).
@@ -69,7 +68,6 @@ export async function GET(request: NextRequest) {
           orderBy: { createdAt: 'asc' },
           select: {
             id: true,
-            bodyEnc: true,
             senderUserId: true,
             createdAt: true,
           },
@@ -79,7 +77,6 @@ export async function GET(request: NextRequest) {
           for (const msg of newMessages) {
             const data = JSON.stringify({
               id: msg.id,
-              body: await decryptText(msg.bodyEnc),
               senderUserId: msg.senderUserId,
               isOwn: msg.senderUserId === actor.userId,
               createdAt: msg.createdAt.toISOString(),
@@ -104,7 +101,7 @@ export async function GET(request: NextRequest) {
   return new Response(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'private, no-store',
       Connection: 'keep-alive',
     },
   });

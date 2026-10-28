@@ -20,10 +20,13 @@ ENV NODE_ENV=production
 
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 
-COPY --from=builder /app/.next ./.next
-COPY --from=builder /app/package.json package.json ./
-COPY --from=builder /app/tsconfig.json tsconfig.json ./
-COPY --from=builder /app/prisma ./prisma
+# Next.js standalone output bundles node_modules, server.js and the traced
+# runtime files, so no extra package.json/tsconfig/prisma copy is needed.
+COPY --from=builder /app/.next/standalone ./
+COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
+# React-PDF reads its bundled fonts at runtime when issuing prescriptions.
+COPY --from=builder /app/src/lib/documents/pdf/fonts ./src/lib/documents/pdf/fonts
 
 USER appuser
 

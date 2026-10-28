@@ -34,6 +34,7 @@ export async function sendMessageAction(
     if (e instanceof ResourceNotFoundError) return { error: locale === 'ar' ? 'غير موجود.' : 'Non trouvé.' };
     if (e instanceof MessageValidationError) {
       const messages: Record<string, { fr: string; ar: string }> = {
+        e2ee_required: { fr: 'Rechargez la messagerie pour utiliser le chiffrement de bout en bout.', ar: 'أعد تحميل المراسلة لاستخدام التشفير من طرف إلى طرف.' },
         empty: { fr: 'Le message ne peut pas être vide.', ar: 'لا يمكن أن يكون الرسالة فارغة.' },
         too_long: { fr: 'Le message est trop long.', ar: 'الرسالة طويلة جدًا.' },
       };

@@ -45,6 +45,17 @@ export function buildWeek(args: {
   });
 }
 
+/** Full Monday–Sunday rows, including adjacent dates at the month edges. */
+export function buildMonth(args: Parameters<typeof buildWeek>[0]): WeekDay[] {
+  const month = DateTime.fromJSDate(args.anchor).setZone(args.timezone).startOf('month');
+  const end = month.endOf('month').endOf('week');
+  const days: WeekDay[] = [];
+  for (let cursor = month.startOf('week'); cursor <= end; cursor = cursor.plus({ weeks: 1 })) {
+    days.push(...buildWeek({ ...args, anchor: cursor.toJSDate() }));
+  }
+  return days;
+}
+
 export function shiftWeek(anchor: Date, timezone: string, direction: -1 | 1): Date {
   return DateTime.fromJSDate(anchor)
     .setZone(timezone)

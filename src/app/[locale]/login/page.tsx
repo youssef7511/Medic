@@ -5,7 +5,7 @@ import { LocaleSwitcher } from '@/components/LocaleSwitcher';
 import { Link } from '@/i18n/navigation';
 import { getCurrentActor } from '@/lib/auth/session';
 import { defaultLandingFor, safeNextPath } from '@/lib/auth/redirects';
-import { portalOwnsPath, type LoginPortal } from '@/lib/auth/portals';
+import { portalOwnsPath, rolesAllowPortal, type LoginPortal } from '@/lib/auth/portals';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +20,12 @@ export default async function LoginPage({
   const { next } = await searchParams;
   const ar = locale === 'ar';
   const actor = await getCurrentActor();
-  if (actor) redirect(defaultLandingFor(actor.roles, locale));
+  if (actor) {
+    const fallback = defaultLandingFor(actor.roles, locale);
+    const destination = safeNextPath(next, locale, fallback);
+    const allowed = (['patient', 'doctor', 'admin'] as const).some(portal => rolesAllowPortal(actor.roles, portal) && portalOwnsPath(portal, destination, locale));
+    redirect(allowed ? destination : fallback);
+  }
 
   // A protected-space redirect already tells us which portal the visitor
   // intended to use. Invalid or external `next` values never influence this.

@@ -65,5 +65,6 @@ export async function appointmentAction(
   }
 
   revalidatePath('/d');
+  revalidatePath('/[locale]/d/calendar', 'page');
   return { ok: true };
 }

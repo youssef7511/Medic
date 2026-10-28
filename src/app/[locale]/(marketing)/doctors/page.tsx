@@ -1,32 +1,11 @@
 import { getTranslations } from 'next-intl/server';
 import { CalendarDays, Languages, MapPin, Search, ShieldCheck, Stethoscope } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
-import { prisma } from '@/lib/db';
+import { getCurrentActor } from '@/lib/auth/session';
+import { rolesAllowPortal } from '@/lib/auth/portals';
+import { getPublicDirectory, publicClinicCity as clinicCity, publicText as localText } from '@/lib/doctors/public-directory';
 
 export const dynamic = 'force-dynamic';
-
-async function getPublishedDoctors() {
-  try {
-    return await prisma.doctorProfile.findMany({
-      where: { isPublished: true },
-      include: { specialty: true, clinics: { select: { name: true, address: true } } },
-      orderBy: { createdAt: 'desc' },
-      take: 60,
-    });
-  } catch {
-    return [];
-  }
-}
-
-function localText(value: unknown, locale: string) {
-  const translated = value as Record<string, string> | null;
-  return translated?.[locale] ?? translated?.fr ?? '';
-}
-
-function clinicCity(address: unknown) {
-  const fields = address as Record<string, unknown> | null;
-  return typeof fields?.city === 'string' ? fields.city : '';
-}
 
 export default async function DoctorsDirectoryPage({
   params,
@@ -39,13 +18,15 @@ export default async function DoctorsDirectoryPage({
   const filters = await searchParams;
   const t = await getTranslations();
   const ar = locale === 'ar';
-  const doctors = await getPublishedDoctors();
+  const [{ doctors, specialties: catalogSpecialties }, actor] = await Promise.all([getPublicDirectory(), getCurrentActor()]);
+  const canBook = actor && rolesAllowPortal(actor.roles, 'patient');
+  const bookingHref = (id: string) => canBook ? `/p/doctors/${id}/book` : `/login/patient?next=${encodeURIComponent(`/p/doctors/${id}/book`)}`;
   const q = filters.q?.trim().toLocaleLowerCase(locale) ?? '';
   const specialtyFilter = filters.specialty ?? '';
   const cityFilter = filters.city ?? '';
 
   const specialties = Array.from(
-    new Map(doctors.map((doctor) => [doctor.specialty.slug, localText(doctor.specialty.name, locale)])).entries(),
+    new Map(catalogSpecialties.map((specialty) => [specialty.slug, localText(specialty.name, locale)])).entries(),
   ).sort((a, b) => a[1].localeCompare(b[1], locale));
   const cities = Array.from(
     new Set(doctors.flatMap((doctor) => doctor.clinics.map((clinic) => clinicCity(clinic.address))).filter(Boolean)),
@@ -127,7 +108,7 @@ export default async function DoctorsDirectoryPage({
                           </div>
                           <div className="mt-5 flex flex-wrap gap-3">
                             <Link href={`/doctors/${doctor.slug}`} className="rounded-xl border border-slate-300 px-4 py-2.5 text-sm font-semibold text-navy-950 hover:border-brand-400 hover:bg-brand-50">{t('directory.viewProfile')}</Link>
-                            <Link href={`/login/patient?next=/p/doctors/${doctor.id}/book`} className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">{t('common.book')}</Link>
+                            <Link href={bookingHref(doctor.id)} className="rounded-xl bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700">{t('common.book')}</Link>
                           </div>
                         </div>
                       </div>
@@ -149,7 +130,7 @@ export default async function DoctorsDirectoryPage({
                 <>
                   <div className="flex items-center gap-3"><DoctorAvatar name={localText(featured.headline, locale) || featured.slug} small /><div><p className="text-sm font-bold text-navy-950">{localText(featured.headline, locale) || featured.slug}</p><p className="text-xs text-slate-500">{localText(featured.specialty.name, locale)}</p></div></div>
                   <div className="mt-5 rounded-xl bg-slate-50 p-4 text-sm text-slate-600"><p className="font-semibold text-navy-950">{ar ? 'مواعيد مرنة' : 'Créneaux flexibles'}</p><p className="mt-1 text-xs leading-5">{ar ? 'التوافر الفعلي يظهر بعد تسجيل الدخول.' : 'Les disponibilités réelles apparaissent après connexion.'}</p></div>
-                  <Link href={`/login/patient?next=/p/doctors/${featured.id}/book`} className="mt-5 block rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700">{t('common.book')}</Link>
+                  <Link href={bookingHref(featured.id)} className="mt-5 block rounded-xl bg-brand-600 px-4 py-3 text-center text-sm font-semibold text-white hover:bg-brand-700">{t('common.book')}</Link>
                 </>
               ) : <p className="text-sm text-slate-500">{t('directory.empty')}</p>}
               <p className="mt-5 flex items-start gap-2 text-xs leading-5 text-slate-500"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />{ar ? 'محترفون تم التحقق منهم للحصول على رعاية موثوقة.' : 'Professionnels vérifiés pour une prise en charge de confiance.'}</p>
